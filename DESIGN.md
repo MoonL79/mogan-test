@@ -7,8 +7,9 @@ command line
   -> mogan-cli
     -> Goldfish command router
     -> xmake build/run entry for full Mogan client
-    -> Mogan internal Scheme via -x
-    -> future remote-login connection layer
+    -> direct moganstem `-x` runtime entry for injected Scheme
+    -> runtime trace file for scripted verification
+    -> remote-login connection layer
 ```
 
 ## Current Slice
@@ -31,9 +32,9 @@ The platform is split into two stages:
 - `start-client`
   Runs `xmake r stem` inside `/home/mingshen/git/mogan`.
 - `exec-internal`
-  Starts Mogan and executes Scheme inside the live Mogan runtime through `-x`.
+  Runs the built `moganstem` binary directly with `-d -debug-bench -x ...` so injected Scheme actually reaches the Mogan runtime.
 - `connect`
-  Reserved command for the next iteration of the real connection layer.
+  Runs the built `moganstem` binary directly, loads `mogan-runtime.scm`, and records the real remote-login trace in `/tmp/mogan-test-connect-trace.log`.
 
 ## Constraints
 
@@ -47,15 +48,17 @@ What is real:
 
 - The test platform can invoke the real Mogan build workflow.
 - The test platform can invoke the real Mogan startup workflow.
-- The test platform can dispatch Scheme into Mogan through the real `-x` startup path.
+- The test platform can dispatch Scheme into Mogan through a real direct `moganstem -x` path.
+- The test platform can record runtime-side connection traces to `/tmp/mogan-test-connect-trace.log`.
 - The runtime expectations are exposed as machine-readable JSON.
 
 What is not finished yet:
 
-- The test platform does not yet complete a real `remote-login` flow.
-- The new runtime dispatch entry does not yet prove a working server/client handshake.
-- No end-to-end `command -> route -> running Mogan -> result` path exists yet.
+- The test platform still does not complete a real `remote-login` flow.
+- The current runtime trace proves that `client-start` is returning `-1` in the injected connector runtime.
+- A plain `xmake r stem` full client did not expose a confirmed TCP listener on port `6561` in this environment, so the server side is not yet connectable.
+- No successful end-to-end `command -> route -> running Mogan -> result` path exists yet.
 
 ## Next Step
 
-Implement `remote-login` on top of the new `exec-internal` runtime path, so the test platform moves from “can execute inside Mogan” to “can connect and authenticate through the existing server/client mechanism”.
+Make the full client side genuinely connectable on port `6561`, then rerun the recorded `client-start` probe and continue from the existing direct `moganstem -x` runtime path.

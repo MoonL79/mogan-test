@@ -72,7 +72,8 @@
     (cons "connect_trace_path" *connect-trace-path*)
     (cons "next_step" "Use `mogan-cli connect --dry-run` to inspect the direct moganstem remote-login runtime path, then validate it against a running Mogan instance")
     (cons "connect_status" "runtime-skeleton")
-    (cons "connect_note" "The full client still starts via `xmake r stem`; internal execution bypasses xmake run because the stem target drops extra arguments")))
+    (cons "connect_note" "The full client still starts via `xmake r stem`; internal execution bypasses xmake run because the stem target drops extra arguments")
+    (cons "connect_blocker" "A plain `xmake r stem` client did not expose a live TCP listener on port 6561 in this environment, so the runtime-side `client-start` probe currently returns -1")))
 
 (define (cmd-status args)
   (apply make-success (status-data)))
@@ -95,9 +96,10 @@
     (cons "port" *default-port*)
     (cons "trace_path" *connect-trace-path*)
     (cons "dispatch_path" "mogan-cli connect -> moganstem -d -debug-bench -x -> load mogan-runtime.scm -> mogan-test-remote-login")
-    (cons "runtime_side" "remote-login is attempted inside Mogan through client-login-then")
-    (cons "validation_state" "unverified")
-    (cons "next_step" "Run `mogan-cli connect --dry-run` to inspect the exact runtime command, then validate it against a separately started Mogan client instance and inspect the trace file")))
+    (cons "runtime_side" "remote-login is attempted inside Mogan through explicit client-start, enter-secure-mode, and client-remote-eval* steps")
+    (cons "validation_state" "blocked-at-client-start")
+    (cons "current_result" "The runtime trace currently reaches `client-start returned -1`")
+    (cons "next_step" "Start a full client, verify whether it actually exposes port 6561, then continue from the recorded `client-start` blocker in the trace file")))
 
 (define *commands*
   `(("status" . ,cmd-status)
