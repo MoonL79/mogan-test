@@ -79,7 +79,7 @@ else
 fi
 
 echo "Test 8: Status reports the internal runtime dispatch path..."
-if echo "$STATUS_OUTPUT" | grep -q '"internal_command":"xmake r stem -x <scheme>"' &&
+if echo "$STATUS_OUTPUT" | grep -q '"internal_command":"TEXMACS_PATH=\\/home\\/mingshen\\/git\\/mogan\\/TeXmacs <moganstem> -d -debug-bench -x <scheme>"' &&
    echo "$STATUS_OUTPUT" | grep -q '"mogan_layer"'; then
   pass "Status exposes the Mogan internal Scheme dispatch path"
 else
@@ -88,13 +88,23 @@ fi
 
 echo "Test 9: exec-internal dry-run builds the Mogan command..."
 INTERNAL_OUTPUT=$($CLI exec-internal --dry-run 2>&1) || true
-if echo "$INTERNAL_OUTPUT" | grep -q 'xmake r stem -x'; then
+if echo "$INTERNAL_OUTPUT" | grep -q 'moganstem' &&
+   echo "$INTERNAL_OUTPUT" | grep -q -- '-x'; then
   pass "exec-internal dry-run prints the Mogan runtime command"
 else
   fail "exec-internal dry-run did not print the expected command: $INTERNAL_OUTPUT"
 fi
 
-echo "Test 10: Build command is invokable..."
+echo "Test 10: connect dry-run builds the remote-login command..."
+CONNECT_OUTPUT=$($CLI connect --dry-run 2>&1) || true
+if echo "$CONNECT_OUTPUT" | grep -q 'mogan-test-remote-login' &&
+   echo "$CONNECT_OUTPUT" | grep -q 'moganstem'; then
+  pass "connect dry-run prints the remote-login runtime command"
+else
+  fail "connect dry-run did not print the expected remote-login command: $CONNECT_OUTPUT"
+fi
+
+echo "Test 11: Build command is invokable..."
 if bash -n "$CLI"; then
   pass "Shell wrapper syntax is valid"
 else
@@ -110,7 +120,8 @@ if [[ $FAILED -eq 0 ]]; then
   echo "  - Build with: ./mogan-cli build-client"
   echo "  - Start full client with: ./mogan-cli start-client"
   echo "  - Inspect internal dispatch with: ./mogan-cli exec-internal --dry-run"
-  echo "  - Then continue implementing remote-login on top of the Mogan server/client path"
+  echo "  - Inspect remote-login dispatch with: ./mogan-cli connect --dry-run"
+  echo "  - Then validate the remote-login path against a separately started Mogan client"
   exit 0
 else
   echo -e "${RED}$FAILED test(s) failed${NC}"

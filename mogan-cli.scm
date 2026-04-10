@@ -8,12 +8,13 @@
 (import (liii base)
         (liii json)
         (scheme base)
+        (scheme file)
         (scheme process-context))
 
 (define *mogan-root* "/home/mingshen/git/mogan")
 (define *build-command* "xmake b stem")
 (define *run-command* "xmake r stem")
-(define *internal-command* "xmake r stem -x <scheme>")
+(define *internal-command* "TEXMACS_PATH=/home/mingshen/git/mogan/TeXmacs <moganstem> -d -debug-bench -x <scheme>")
 (define *default-host* "127.0.0.1")
 (define *default-port* 6561)
 
@@ -26,22 +27,35 @@
 (define (make-error message . extra)
   (make-response "error" (cons (cons "message" message) extra)))
 
+(define *connect-trace-path* "/tmp/mogan-test-connect-trace.log")
+
+(define (candidate-client-paths)
+  (list
+    (string-append *mogan-root* "/build/linux/x86_64/debug/moganstem")
+    (string-append *mogan-root* "/build/linux/x86_64/release/moganstem")))
+
 (define (built-client-path)
-  (string-append *mogan-root* "/build/linux/x86_64/debug/moganstem"))
+  (let loop ((paths (candidate-client-paths)))
+    (cond
+      ((null? paths)
+       (car (candidate-client-paths)))
+      ((file-exists? (car paths))
+       (car paths))
+      (else
+       (loop (cdr paths))))))
+
+(define (client-built?)
+  (let loop ((paths (candidate-client-paths)))
+    (cond
+      ((null? paths) #f)
+      ((file-exists? (car paths)) #t)
+      (else (loop (cdr paths))))))
 
 (define (string-suffix? suffix s)
   (let ((suffix-length (string-length suffix))
         (s-length (string-length s)))
     (and (>= s-length suffix-length)
          (equal? (substring s (- s-length suffix-length) s-length) suffix))))
-
-(define (file-exists? path)
-  (guard (exn
-           (else #f))
-    (call-with-input-file path
-      (lambda (port)
-        (close-input-port port)
-        #t))))
 
 (define (status-data)
   (list
@@ -50,14 +64,15 @@
     (cons "run_command" *run-command*)
     (cons "internal_command" *internal-command*)
     (cons "client_path" (built-client-path))
-    (cons "client_built" (file-exists? (built-client-path)))
+    (cons "client_built" (client-built?))
     (cons "gf_layer" "Routes commands and prepares process execution")
     (cons "mogan_layer" "Runs Scheme through `-x` inside the live Mogan runtime")
     (cons "connect_host" *default-host*)
     (cons "connect_port" *default-port*)
-    (cons "next_step" "Use `mogan-cli exec-internal --dry-run` to inspect the Mogan runtime dispatch path, then wire remote-login on top of it")
-    (cons "connect_status" "stub")
-    (cons "connect_note" "The runtime dispatch path is real; the remote-login connection flow is not wired yet")))
+    (cons "connect_trace_path" *connect-trace-path*)
+    (cons "next_step" "Use `mogan-cli connect --dry-run` to inspect the direct moganstem remote-login runtime path, then validate it against a running Mogan instance")
+    (cons "connect_status" "runtime-skeleton")
+    (cons "connect_note" "The full client still starts via `xmake r stem`; internal execution bypasses xmake run because the stem target drops extra arguments")))
 
 (define (cmd-status args)
   (apply make-success (status-data)))
@@ -65,21 +80,24 @@
 (define (cmd-workflow args)
   (make-success
     (cons "steps"
-          "1. cd /home/mingshen/git/mogan 2. xmake b stem 3. xmake r stem or mogan-cli exec-internal 4. Wire remote-login on top of the runtime dispatch path")
+          "1. cd /home/mingshen/git/mogan 2. xmake b stem 3. xmake r stem in one client instance 4. Use mogan-cli connect or exec-internal to run direct moganstem `-x` commands in another runtime 5. Validate remote-login")
     (cons "constraints"
           "Do not use headless startup in this stage; do not introduce external TeXmacs tooling; only reuse TeXmacs-related mechanisms already inside mogan")
     (cons "layers"
           "gf handles CLI routing and process dispatch; Mogan internal Scheme runs through `-x` and is the only place where runtime glue is available")))
 
 (define (cmd-connect args)
-  (make-error
-    "Connection layer not implemented yet"
+  (make-response
+    "pending"
     (cons "required_order"
-          "build-client -> exec-internal or start-client -> connect")
+          "build-client -> start-client -> connect")
     (cons "host" *default-host*)
     (cons "port" *default-port*)
-    (cons "dispatch_path" "Use `mogan-cli exec-internal` to execute Scheme inside Mogan before wiring remote-login")
-    (cons "next_step" "Implement a real remote-login path on top of the Mogan internal runtime dispatch entry")))
+    (cons "trace_path" *connect-trace-path*)
+    (cons "dispatch_path" "mogan-cli connect -> moganstem -d -debug-bench -x -> load mogan-runtime.scm -> mogan-test-remote-login")
+    (cons "runtime_side" "remote-login is attempted inside Mogan through client-login-then")
+    (cons "validation_state" "unverified")
+    (cons "next_step" "Run `mogan-cli connect --dry-run` to inspect the exact runtime command, then validate it against a separately started Mogan client instance and inspect the trace file")))
 
 (define *commands*
   `(("status" . ,cmd-status)
@@ -110,7 +128,7 @@
   (newline)
   (display "  exec-internal - Start Mogan and execute internal Scheme through `-x`")
   (newline)
-  (display "  connect       - Reserved entry for test-platform connection")
+  (display "  connect       - Attempt remote-login through Mogan internal Scheme")
   (newline))
 
 (define (script-arg? arg)
