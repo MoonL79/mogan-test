@@ -13,6 +13,7 @@
 (define *mogan-root* "/home/mingshen/git/mogan")
 (define *build-command* "xmake b stem")
 (define *run-command* "xmake r stem")
+(define *internal-command* "xmake r stem -x <scheme>")
 (define *default-host* "127.0.0.1")
 (define *default-port* 6561)
 
@@ -47,13 +48,16 @@
     (cons "mogan_root" *mogan-root*)
     (cons "build_command" *build-command*)
     (cons "run_command" *run-command*)
+    (cons "internal_command" *internal-command*)
     (cons "client_path" (built-client-path))
     (cons "client_built" (file-exists? (built-client-path)))
+    (cons "gf_layer" "Routes commands and prepares process execution")
+    (cons "mogan_layer" "Runs Scheme through `-x` inside the live Mogan runtime")
     (cons "connect_host" *default-host*)
     (cons "connect_port" *default-port*)
-    (cons "next_step" "Start a full Mogan client with `mogan-cli start-client`, then connect from the test platform")
-    (cons "connect_status" "pending")
-    (cons "connect_note" "The connection layer is not wired yet; current slice prepares and validates the runtime workflow")))
+    (cons "next_step" "Use `mogan-cli exec-internal --dry-run` to inspect the Mogan runtime dispatch path, then wire remote-login on top of it")
+    (cons "connect_status" "stub")
+    (cons "connect_note" "The runtime dispatch path is real; the remote-login connection flow is not wired yet")))
 
 (define (cmd-status args)
   (apply make-success (status-data)))
@@ -61,18 +65,21 @@
 (define (cmd-workflow args)
   (make-success
     (cons "steps"
-          "1. cd /home/mingshen/git/mogan 2. xmake b stem 3. xmake r stem 4. Use the test platform to connect to the running client")
+          "1. cd /home/mingshen/git/mogan 2. xmake b stem 3. xmake r stem or mogan-cli exec-internal 4. Wire remote-login on top of the runtime dispatch path")
     (cons "constraints"
-          "Do not use headless startup in this stage; do not introduce external TeXmacs tooling; only reuse TeXmacs-related mechanisms already inside mogan")))
+          "Do not use headless startup in this stage; do not introduce external TeXmacs tooling; only reuse TeXmacs-related mechanisms already inside mogan")
+    (cons "layers"
+          "gf handles CLI routing and process dispatch; Mogan internal Scheme runs through `-x` and is the only place where runtime glue is available")))
 
 (define (cmd-connect args)
   (make-error
     "Connection layer not implemented yet"
     (cons "required_order"
-          "build-client -> start-client -> connect")
+          "build-client -> exec-internal or start-client -> connect")
     (cons "host" *default-host*)
     (cons "port" *default-port*)
-    (cons "next_step" "Implement a real client connection on top of Mogan's existing server/client mechanism")))
+    (cons "dispatch_path" "Use `mogan-cli exec-internal` to execute Scheme inside Mogan before wiring remote-login")
+    (cons "next_step" "Implement a real remote-login path on top of the Mogan internal runtime dispatch entry")))
 
 (define *commands*
   `(("status" . ,cmd-status)
@@ -86,7 +93,7 @@
         (make-error
           (string-append "Unknown command: " command)
           (cons "available"
-                "status, workflow, connect, build-client, start-client")))))
+                "status, workflow, connect, build-client, start-client, exec-internal")))))
 
 (define (show-usage)
   (display "Usage: mogan-cli <command> [args...]")
@@ -100,6 +107,8 @@
   (display "  build-client  - Build Mogan with `xmake b stem`")
   (newline)
   (display "  start-client  - Start a full Mogan client with `xmake r stem`")
+  (newline)
+  (display "  exec-internal - Start Mogan and execute internal Scheme through `-x`")
   (newline)
   (display "  connect       - Reserved entry for test-platform connection")
   (newline))

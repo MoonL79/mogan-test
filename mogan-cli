@@ -4,6 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCHEME_SCRIPT="${SCRIPT_DIR}/mogan-cli.scm"
+RUNTIME_SCRIPT="${SCRIPT_DIR}/mogan-runtime.scm"
 MOGAN_ROOT="/home/mingshen/git/mogan"
 
 if ! command -v gf >/dev/null 2>&1; then
@@ -29,6 +30,19 @@ case "$command_name" in
     cd "$MOGAN_ROOT"
     exec xmake r stem "$@"
     ;;
+  exec-internal)
+    shift || true
+    runtime_expr="${1:-}"
+    if [[ "$runtime_expr" == "--dry-run" ]] || [[ -z "$runtime_expr" ]]; then
+      runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-runtime-status)"
+    fi
+    if [[ "${2:-}" == "--dry-run" ]] || [[ "${1:-}" == "--dry-run" ]]; then
+      printf 'cd %s && xmake r stem -x %q\n' "$MOGAN_ROOT" "$runtime_expr"
+      exit 0
+    fi
+    cd "$MOGAN_ROOT"
+    exec xmake r stem -x "$runtime_expr"
+    ;;
   "")
     cat <<'EOF'
 Usage: mogan-cli <command> [args...]
@@ -37,6 +51,7 @@ Commands:
   workflow      - Show the required Mogan startup workflow
   build-client  - Build Mogan with `xmake b stem`
   start-client  - Start a full Mogan client with `xmake r stem`
+  exec-internal - Start Mogan and execute internal Scheme via `-x`
   connect       - Reserved entry for test-platform connection
 EOF
     exit 0

@@ -78,7 +78,23 @@ else
   fail "Workflow output missing the non-headless startup constraint: $WORKFLOW_OUTPUT"
 fi
 
-echo "Test 8: Build command is invokable..."
+echo "Test 8: Status reports the internal runtime dispatch path..."
+if echo "$STATUS_OUTPUT" | grep -q '"internal_command":"xmake r stem -x <scheme>"' &&
+   echo "$STATUS_OUTPUT" | grep -q '"mogan_layer"'; then
+  pass "Status exposes the Mogan internal Scheme dispatch path"
+else
+  fail "Status does not expose the internal runtime dispatch path: $STATUS_OUTPUT"
+fi
+
+echo "Test 9: exec-internal dry-run builds the Mogan command..."
+INTERNAL_OUTPUT=$($CLI exec-internal --dry-run 2>&1) || true
+if echo "$INTERNAL_OUTPUT" | grep -q 'xmake r stem -x'; then
+  pass "exec-internal dry-run prints the Mogan runtime command"
+else
+  fail "exec-internal dry-run did not print the expected command: $INTERNAL_OUTPUT"
+fi
+
+echo "Test 10: Build command is invokable..."
 if bash -n "$CLI"; then
   pass "Shell wrapper syntax is valid"
 else
@@ -93,7 +109,8 @@ if [[ $FAILED -eq 0 ]]; then
   echo "Runtime Note:"
   echo "  - Build with: ./mogan-cli build-client"
   echo "  - Start full client with: ./mogan-cli start-client"
-  echo "  - Then continue implementing the connection layer on top of Mogan server/client"
+  echo "  - Inspect internal dispatch with: ./mogan-cli exec-internal --dry-run"
+  echo "  - Then continue implementing remote-login on top of the Mogan server/client path"
   exit 0
 else
   echo -e "${RED}$FAILED test(s) failed${NC}"

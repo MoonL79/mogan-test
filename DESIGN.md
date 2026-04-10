@@ -7,7 +7,8 @@ command line
   -> mogan-cli
     -> Goldfish command router
     -> xmake build/run entry for full Mogan client
-    -> future connection layer for runtime control
+    -> Mogan internal Scheme via -x
+    -> future remote-login connection layer
 ```
 
 ## Current Slice
@@ -29,6 +30,8 @@ The platform is split into two stages:
   Runs `xmake b stem` inside `/home/mingshen/git/mogan`.
 - `start-client`
   Runs `xmake r stem` inside `/home/mingshen/git/mogan`.
+- `exec-internal`
+  Starts Mogan and executes Scheme inside the live Mogan runtime through `-x`.
 - `connect`
   Reserved command for the next iteration of the real connection layer.
 
@@ -44,13 +47,15 @@ What is real:
 
 - The test platform can invoke the real Mogan build workflow.
 - The test platform can invoke the real Mogan startup workflow.
+- The test platform can dispatch Scheme into Mogan through the real `-x` startup path.
 - The runtime expectations are exposed as machine-readable JSON.
 
 What is not finished yet:
 
-- The test platform does not yet connect to the running Mogan client.
+- The test platform does not yet complete a real `remote-login` flow.
+- The new runtime dispatch entry does not yet prove a working server/client handshake.
 - No end-to-end `command -> route -> running Mogan -> result` path exists yet.
 
 ## Next Step
 
-Implement the real connection layer on top of Mogan's existing server/client mechanism after the full client has been started with `xmake r stem`.
+Implement `remote-login` on top of the new `exec-internal` runtime path, so the test platform moves from “can execute inside Mogan” to “can connect and authenticate through the existing server/client mechanism”.
