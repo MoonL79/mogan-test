@@ -35,6 +35,9 @@ The control client is a second `moganstem` runtime that loads `mogan-runtime.scm
 logs in through the existing `client-start` and `remote-login` glue,
 and then invokes a server-side command.
 
+In this architecture, the server is the intermediary control surface.
+`mogan-test` connects to that running server and uses it to indirectly control the live Mogan process.
+
 The current account flow is intentionally test-scoped:
 - `create-account` writes a lightweight `users.scm` record through `mogan-server-runtime.scm`
 - `remote-login` is shimmed inside `mogan-server-runtime.scm` so it authenticates against the same test user store

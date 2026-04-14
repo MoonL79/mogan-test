@@ -1,6 +1,7 @@
 # Mogan Test Platform
 
 `mogan-test` 是一个面向运行中 `moganstem -server` 实例的最小命令行控制层。
+这里的 server 是中介控制面，`mogan-test` 连接它，再间接控制运行中的 Mogan。
 它使用 Goldfish Scheme 编写控制器和运行时胶水逻辑，并保持验证流程可脚本化。
 
 ## 快速开始

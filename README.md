@@ -3,8 +3,9 @@
 中文版本: [README.zh_CN.md](/home/mingshen/git/mogan-test/README.zh_CN.md)
 
 `mogan-test` is a minimal command-line control layer for a live `moganstem -server`
-instance. It uses Goldfish Scheme for the controller/runtime glue and keeps the
-validation path scriptable.
+instance. The server is the intermediary control surface: `mogan-test` connects to
+it and indirectly controls the live Mogan process. It uses Goldfish Scheme for the
+controller/runtime glue and keeps the validation path scriptable.
 
 ## Quick Start
 
