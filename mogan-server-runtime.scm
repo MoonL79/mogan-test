@@ -172,6 +172,16 @@
       (else
        ""))))
 
+(define (mogan-test-buffer-record buffer)
+  (list
+    (cons "buffer" (url->string buffer))
+    (cons "title" (buffer-get-title buffer))
+    (cons "modified" (buffer-modified? buffer))
+    (cons "current" (equal? buffer (current-buffer)))))
+
+(define (mogan-test-buffer-list-value)
+  (map mogan-test-buffer-record (buffer-list)))
+
 (tm-service (mogan-test-write-text text)
   (mogan-test-server-log
     (string-append
@@ -185,6 +195,50 @@
   (mogan-test-server-log "mogan-server-runtime: buffer-text")
   (when (mogan-test-require-login envelope)
     (server-return envelope (mogan-test-buffer-text-value))))
+
+(tm-service (mogan-test-buffer-list)
+  (mogan-test-server-log "mogan-server-runtime: buffer-list")
+  (when (mogan-test-require-login envelope)
+    (server-return envelope (mogan-test-buffer-list-value))))
+
+(tm-service (mogan-test-open-file path)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: open-file path="
+      path))
+  (when (mogan-test-require-login envelope)
+    (let ((u (system->url path)))
+      (if (url-exists? u)
+          (begin
+            (load-buffer u)
+            (mogan-test-return-control-state envelope))
+          (server-error envelope
+                        (string-append "file not found: " path))))))
+
+(tm-service (mogan-test-save-as path)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: save-as path="
+      path))
+  (when (mogan-test-require-login envelope)
+    (save-buffer-as (system->url path) :overwrite)
+    (mogan-test-return-control-state envelope)))
+
+(tm-service (mogan-test-revert-buffer)
+  (mogan-test-server-log "mogan-server-runtime: revert-buffer")
+  (when (mogan-test-require-login envelope)
+    (revert-buffer-revert)
+    (mogan-test-return-control-state envelope)))
+
+(tm-service (mogan-test-close-buffer)
+  (mogan-test-server-log "mogan-server-runtime: close-buffer")
+  (when (mogan-test-require-login envelope)
+    (let ((buf (current-buffer)))
+      (if buf
+          (begin
+            (buffer-close buf)
+            (server-return envelope (mogan-test-buffer-list-value)))
+          (server-error envelope "no current buffer")))))
 
 (define (mogan-test-current-buffer-string)
   (let ((buffer-name (current-buffer)))

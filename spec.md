@@ -144,6 +144,11 @@ Mogan 命令行控制与测试平台
 - `insert-text` / `insert-return`
 - `delete-left` / `delete-right`
 - `save-buffer`
+- `buffer-list`
+- `open-file`
+- `save-as`
+- `revert-buffer`
+- `close-buffer`
 - `switch-buffer`
 - `batch`
 - `write-text` / `buffer-text` 作为更高层的兼容命令
@@ -161,12 +166,13 @@ Mogan 命令行控制与测试平台
 
 - `scenario smoke-edit`
 - `scenario batch-smoke`
+- `scenario file-smoke`
 - `scenario history-smoke`
 - `scenario clipboard-smoke`
 
 `batch` 命令应当支持在同一个 target profile 上串行执行多个步骤。
 
-这些命令应该返回可脚本化结果，至少包含当前缓冲区、光标、选区、编辑历史和文本状态。
+这些命令应该返回可脚本化结果，至少包含当前缓冲区、打开缓冲区列表、光标、选区、编辑历史和文本状态。
 
 如果真实 Mogan 能力暂时无法完整接入，则必须明确：
 

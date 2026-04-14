@@ -41,11 +41,17 @@
 - `./mogan-cli paste`
 - `./mogan-cli clear-undo-history`
 - `./mogan-cli save-buffer`
+- `./mogan-cli buffer-list`
+- `./mogan-cli open-file /tmp/example.tm`
+- `./mogan-cli save-as /tmp/example.tm`
+- `./mogan-cli revert-buffer`
+- `./mogan-cli close-buffer`
 - `./mogan-cli batch smoke -- new-document -- insert-text "hello" -- move-end -- insert-text "!" -- buffer-text`
 - `./mogan-cli target save smoke`
 - `./mogan-cli target run smoke state`
 - `./mogan-cli scenario smoke-edit`
 - `./mogan-cli scenario batch-smoke smoke`
+- `./mogan-cli scenario file-smoke smoke /tmp/example.tm`
 - `./mogan-cli scenario history-smoke smoke`
 - `./mogan-cli scenario clipboard-smoke smoke`
 - `./mogan-cli traces`
@@ -72,7 +78,7 @@
 ## 当前控制片段
 
 除了 `ping` 和缓冲区身份检查之外，当前测试运行时还暴露了一组
-低级编辑、历史和剪贴板原语：
+低级编辑、历史、剪贴板和文件生命周期原语：
 
 1. `./mogan-cli new-document`
 2. `./mogan-cli write-text 127.0.0.1 test-user test-pass "hello from mogan-test"`
@@ -86,9 +92,14 @@
 10. `./mogan-cli cut 127.0.0.1 test-user test-pass`
 11. `./mogan-cli paste 127.0.0.1 test-user test-pass`
 12. `./mogan-cli clear-undo-history 127.0.0.1 test-user test-pass`
+13. `./mogan-cli buffer-list 127.0.0.1 test-user test-pass`
+14. `./mogan-cli open-file /tmp/example.tm`
+15. `./mogan-cli save-as /tmp/example.tm`
+16. `./mogan-cli revert-buffer`
+17. `./mogan-cli close-buffer`
 
 这条路径让 agent 可以检查状态、移动光标、管理编辑历史、使用剪贴板、
-插入文本，并把结果以脚本化形式读回。
+管理文件型缓冲区、插入文本，并把结果以脚本化形式读回。
 
 ## Targets 和 Scenarios
 
@@ -106,3 +117,5 @@
 `./mogan-cli scenario history-smoke smoke` 用来验证撤销/重做。
 
 `./mogan-cli scenario clipboard-smoke smoke` 用来验证复制/粘贴。
+
+`./mogan-cli scenario file-smoke smoke /tmp/example.tm` 用来验证打开、另存、回退和关闭。

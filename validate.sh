@@ -24,9 +24,11 @@ LIVE_NAME="${MOGAN_TEST_NAME:-Test User}"
 LIVE_PASS="${MOGAN_TEST_PASS:-test-pass}"
 LIVE_EMAIL="${MOGAN_TEST_EMAIL:-test@example.com}"
 TARGET_TEST_DIR="$(mktemp -d)"
+FILE_TEST_PATH="$(mktemp /tmp/mogan-test-file-XXXX.tm)"
 
 cleanup() {
   rm -rf "$TARGET_TEST_DIR"
+  rm -f "$FILE_TEST_PATH"
 }
 
 trap cleanup EXIT
@@ -240,7 +242,28 @@ else
   fail "One or more service dry-runs were incorrect"
 fi
 
-echo "Test 16: traces command reports the current debug bundle..."
+echo "Test 16: file dry-runs build the expected lifecycle commands..."
+OPEN_FILE_OUTPUT=$($CLI open-file "$FILE_TEST_PATH" --dry-run 2>&1) || true
+SAVE_AS_OUTPUT=$($CLI save-as "$FILE_TEST_PATH" --dry-run 2>&1) || true
+BUFFER_LIST_OUTPUT=$($CLI buffer-list --dry-run 2>&1) || true
+REVERT_BUFFER_OUTPUT=$($CLI revert-buffer --dry-run 2>&1) || true
+CLOSE_BUFFER_OUTPUT=$($CLI close-buffer --dry-run 2>&1) || true
+SCENARIO_FILE_DRY_RUN_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI scenario file-smoke smoke "$FILE_TEST_PATH" --dry-run 2>&1) || true
+if echo "$OPEN_FILE_OUTPUT" | grep -q 'mogan-test-open-file' &&
+   echo "$SAVE_AS_OUTPUT" | grep -q 'mogan-test-save-as' &&
+   echo "$BUFFER_LIST_OUTPUT" | grep -q 'mogan-test-buffer-list' &&
+   echo "$REVERT_BUFFER_OUTPUT" | grep -q 'mogan-test-revert-buffer' &&
+   echo "$CLOSE_BUFFER_OUTPUT" | grep -q 'mogan-test-close-buffer' &&
+   echo "$SCENARIO_FILE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-open-file' &&
+   echo "$SCENARIO_FILE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-save-as' &&
+   echo "$SCENARIO_FILE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-close-buffer'; then
+  pass "File dry-runs print the expected lifecycle commands"
+else
+  fail "File dry-run workflow failed"
+fi
+
+echo "Test 17: traces command reports the current debug bundle..."
 TRACES_OUTPUT=$($CLI traces 2>&1) || true
 if echo "$TRACES_OUTPUT" | grep -q '/tmp/mogan-test-connect-trace.log' &&
    echo "$TRACES_OUTPUT" | grep -q '/tmp/mogan-test-server-trace.log' &&
@@ -250,7 +273,7 @@ else
   fail "traces command did not report the expected debug bundle: $TRACES_OUTPUT"
 fi
 
-echo "Test 17: Shell wrapper syntax is valid..."
+echo "Test 18: Shell wrapper syntax is valid..."
 if bash -n "$CLI"; then
   pass "Shell wrapper syntax is valid"
 else
@@ -258,7 +281,7 @@ else
 fi
 
 if [[ $LIVE_MODE -eq 1 ]]; then
-  echo "Test 18: Live create-account reaches the running server..."
+  echo "Test 19: Live create-account reaches the running server..."
   LIVE_CREATE_OUTPUT=$($CLI create-account "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_NAME" "$LIVE_PASS" "$LIVE_EMAIL" 2>&1) || true
   if echo "$LIVE_CREATE_OUTPUT" | grep -q 'status: ok'; then
     pass "Live create-account succeeded against the running server"
@@ -268,7 +291,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
     fail "Live create-account failed: $LIVE_CREATE_OUTPUT"
   fi
 
-  echo "Test 19: Live connect reaches the running server..."
+  echo "Test 20: Live connect reaches the running server..."
   LIVE_CONNECT_OUTPUT=$($CLI connect "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_PASS" 2>&1) || true
   if echo "$LIVE_CONNECT_OUTPUT" | grep -q 'status: ok' &&
      echo "$LIVE_CONNECT_OUTPUT" | grep -q 'value: ready'; then
@@ -278,7 +301,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
   fi
 
   if [[ $EXPECT_SERVICES -eq 1 ]]; then
-    echo "Test 20: Live ping reaches the custom server runtime..."
+    echo "Test 21: Live ping reaches the custom server runtime..."
     LIVE_PING_OUTPUT=$($CLI ping "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_PASS" 2>&1) || true
     if echo "$LIVE_PING_OUTPUT" | grep -q 'status: ok' &&
        echo "$LIVE_PING_OUTPUT" | grep -q 'value: \"pong\"'; then
@@ -287,7 +310,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
       fail "Live ping failed: $LIVE_PING_OUTPUT"
     fi
 
-    echo "Test 21: Live smoke scenario reaches the running server..."
+    echo "Test 22: Live smoke scenario reaches the running server..."
     LIVE_SMOKE_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
       $CLI target save smoke "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_NAME" "$LIVE_PASS" "$LIVE_EMAIL" >/dev/null 2>&1 && \
       MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
@@ -300,7 +323,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
       fail "Live smoke scenario failed: $LIVE_SMOKE_OUTPUT"
     fi
 
-    echo "Test 22: Live batch scenario reaches the running server..."
+    echo "Test 23: Live batch scenario reaches the running server..."
     LIVE_BATCH_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
       $CLI scenario batch-smoke smoke 2>&1) || true
     if echo "$LIVE_BATCH_OUTPUT" | grep -q 'status: ok' &&
@@ -311,7 +334,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
       fail "Live batch scenario failed: $LIVE_BATCH_OUTPUT"
     fi
 
-    echo "Test 23: Live history scenario reaches the running server..."
+    echo "Test 24: Live history scenario reaches the running server..."
     LIVE_HISTORY_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
       $CLI scenario history-smoke smoke 2>&1) || true
     if echo "$LIVE_HISTORY_OUTPUT" | grep -q 'status: ok' &&
@@ -324,7 +347,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
       fail "Live history scenario failed: $LIVE_HISTORY_OUTPUT"
     fi
 
-    echo "Test 24: Live clipboard scenario reaches the running server..."
+    echo "Test 25: Live clipboard scenario reaches the running server..."
     LIVE_CLIPBOARD_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
       $CLI scenario clipboard-smoke smoke 2>&1) || true
     if echo "$LIVE_CLIPBOARD_OUTPUT" | grep -q 'status: ok' &&
@@ -335,6 +358,18 @@ if [[ $LIVE_MODE -eq 1 ]]; then
       pass "Live clipboard scenario succeeded against the custom server runtime"
     else
       fail "Live clipboard scenario failed: $LIVE_CLIPBOARD_OUTPUT"
+    fi
+
+    echo "Test 26: Live file scenario reaches the running server..."
+    LIVE_FILE_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+      $CLI scenario file-smoke smoke "$FILE_TEST_PATH" 2>&1) || true
+    if echo "$LIVE_FILE_OUTPUT" | grep -q 'status: ok' &&
+       echo "$LIVE_FILE_OUTPUT" | grep -q 'file smoke' &&
+       echo "$LIVE_FILE_OUTPUT" | grep -q "$FILE_TEST_PATH" &&
+       echo "$LIVE_FILE_OUTPUT" | grep -q 'close-buffer'; then
+      pass "Live file scenario succeeded against the custom server runtime"
+    else
+      fail "Live file scenario failed: $LIVE_FILE_OUTPUT"
     fi
   fi
 fi
@@ -355,10 +390,12 @@ if [[ $FAILED -eq 0 ]]; then
   echo "  - Inspect control primitives with: ./mogan-cli state --dry-run"
   echo "  - Inspect history primitives with: ./mogan-cli undo --dry-run"
   echo "  - Inspect clipboard primitives with: ./mogan-cli copy --dry-run"
+  echo "  - Inspect file lifecycle primitives with: ./mogan-cli open-file /tmp/example.tm --dry-run"
   echo "  - Save a target profile with: ./mogan-cli target save smoke"
   echo "  - Inspect batch workflows with: ./mogan-cli batch smoke -- new-document -- buffer-text"
   echo "  - Run a smoke scenario with: ./mogan-cli scenario smoke-edit"
   echo "  - Run the batch scenario with: ./mogan-cli scenario batch-smoke smoke"
+  echo "  - Run the file scenario with: ./mogan-cli scenario file-smoke smoke /tmp/example.tm"
   echo "  - Run the history scenario with: ./mogan-cli scenario history-smoke smoke"
   echo "  - Run the clipboard scenario with: ./mogan-cli scenario clipboard-smoke smoke"
   echo "  - Inspect trace and runtime files with: ./mogan-cli traces"

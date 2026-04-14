@@ -44,11 +44,17 @@ Run the live validation against that running instance:
 - `./mogan-cli paste`
 - `./mogan-cli clear-undo-history`
 - `./mogan-cli save-buffer`
+- `./mogan-cli buffer-list`
+- `./mogan-cli open-file /tmp/example.tm`
+- `./mogan-cli save-as /tmp/example.tm`
+- `./mogan-cli revert-buffer`
+- `./mogan-cli close-buffer`
 - `./mogan-cli batch smoke -- new-document -- insert-text "hello" -- move-end -- insert-text "!" -- buffer-text`
 - `./mogan-cli target save smoke`
 - `./mogan-cli target run smoke state`
 - `./mogan-cli scenario smoke-edit`
 - `./mogan-cli scenario batch-smoke smoke`
+- `./mogan-cli scenario file-smoke smoke /tmp/example.tm`
 - `./mogan-cli scenario history-smoke smoke`
 - `./mogan-cli scenario clipboard-smoke smoke`
 - `./mogan-cli traces`
@@ -74,7 +80,7 @@ while the underlying TMDB-backed account flow remains a separate concern.
 ## Current Control Slice
 
 Beyond `ping` and buffer identity checks, the current test runtime also exposes a
-small set of low-level editing, history, and clipboard primitives:
+small set of low-level editing, history, clipboard, and file lifecycle primitives:
 
 1. `./mogan-cli new-document`
 2. `./mogan-cli write-text 127.0.0.1 test-user test-pass "hello from mogan-test"`
@@ -88,9 +94,15 @@ small set of low-level editing, history, and clipboard primitives:
 10. `./mogan-cli cut 127.0.0.1 test-user test-pass`
 11. `./mogan-cli paste 127.0.0.1 test-user test-pass`
 12. `./mogan-cli clear-undo-history 127.0.0.1 test-user test-pass`
+13. `./mogan-cli buffer-list 127.0.0.1 test-user test-pass`
+14. `./mogan-cli open-file /tmp/example.tm`
+15. `./mogan-cli save-as /tmp/example.tm`
+16. `./mogan-cli revert-buffer`
+17. `./mogan-cli close-buffer`
 
 This path lets agents inspect state, move the cursor, manage edit history, use
-the clipboard, insert text, and read the result back as a scriptable response.
+the clipboard, manage file-backed buffers, insert text, and read the result back
+as a scriptable response.
 
 ## Targets and Scenarios
 
@@ -110,3 +122,5 @@ batch flow.
 `./mogan-cli scenario history-smoke smoke` validates undo/redo.
 
 `./mogan-cli scenario clipboard-smoke smoke` validates copy/paste.
+
+`./mogan-cli scenario file-smoke smoke /tmp/example.tm` exercises open/save/revert/close.
