@@ -81,9 +81,18 @@
     (cons "runtime_output_path" *runtime-output-path*)
     (cons "traces_command" "./mogan-cli traces")
     (cons "controller_platform" "minimal")
+    (cons "control_surface" "state, move-*, select-*, undo, redo, copy, cut, paste, clear-undo-history, insert-text, delete-*, save-buffer, switch-buffer")
+    (cons "batch_command" "./mogan-cli batch smoke -- new-document -- insert-text ...")
+    (cons "scenario_command" "./mogan-cli scenario smoke-edit")
+    (cons "scenario_batch_command" "./mogan-cli scenario batch-smoke smoke")
+    (cons "scenario_history_command" "./mogan-cli scenario history-smoke smoke")
+    (cons "scenario_clipboard_command" "./mogan-cli scenario clipboard-smoke smoke")
+    (cons "target_command" "./mogan-cli target run <name> <command>")
+    (cons "target_store" "${MOGAN_TEST_TARGET_DIR:-$HOME/.config/mogan-test/targets}")
+    (cons "state_command" "./mogan-cli state")
     (cons "service_runtime_requirement" "create-account, login, and custom service commands require the target server instance to load mogan-server-runtime.scm")
     (cons "auth_model" "mogan-test currently uses a test-scoped users.scm account store and server-side login shim inside mogan-server-runtime.scm")
-    (cons "next_step" "Build with `xmake b stem`, start a connectable server with `mogan-cli start-server` or an equivalent `moganstem -server -x '(load .../mogan-server-runtime.scm)'`, then run `create-account`, `connect`, and service commands from mogan-test")
+    (cons "next_step" "Build with `xmake b stem`, start a connectable server with `mogan-cli start-server` or an equivalent `moganstem -server -x '(load .../mogan-server-runtime.scm)'`, save a target profile with `mogan-cli target save`, then use `target run`, `batch`, `scenario smoke-edit`, `scenario batch-smoke`, `scenario history-smoke`, or `scenario clipboard-smoke` to drive the live server")
     (cons "connect_status" "explicit-server-path-ready-for-live-validation")
     (cons "connect_note" "The real control path is an explicit `moganstem -server` instance; `xmake r stem` remains useful for product startup checks but is not treated as proof of a connectable local server")
     (cons "connect_blocker" "Cross-process validation still depends on a reachable local `-server` instance and the test runtime loaded from mogan-server-runtime.scm")))
@@ -94,7 +103,7 @@
 (define (cmd-workflow args)
   (make-success
     (cons "steps"
-          "1. cd /home/mingshen/git/mogan 2. xmake b stem 3. Start a connectable server with `mogan-cli start-server --platform minimal` or an equivalent `moganstem -server -x '(load .../mogan-server-runtime.scm)'` 4. Run `create-account` from mogan-test to bootstrap credentials through the test-scoped users.scm path 5. Run `connect`, `ping`, `current-buffer`, or `new-document` against that live server")
+          "1. cd /home/mingshen/git/mogan 2. xmake b stem 3. Start a connectable server with `mogan-cli start-server --platform minimal` or an equivalent `moganstem -server -x '(load .../mogan-server-runtime.scm)'` 4. Save a target profile with `mogan-cli target save <name>` 5. Run `mogan-cli target run <name> state`, `mogan-cli batch <name> -- new-document -- insert-text ...`, `mogan-cli scenario smoke-edit`, `mogan-cli scenario batch-smoke <name>`, `mogan-cli scenario history-smoke <name>`, or `mogan-cli scenario clipboard-smoke <name>` to drive the live server 6. Run `create-account`, `connect`, `write-text`, `buffer-text`, `ping`, or `new-document` as needed")
     (cons "constraints"
           "Do not introduce external TeXmacs tooling; reuse only the TeXmacs-related mechanisms already inside mogan; the controller side may use `-platform minimal` when the current environment cannot open the default Qt display")
     (cons "layers"
@@ -111,7 +120,7 @@
     (cons "runtime_side" "remote-login and follow-up commands run through explicit client-start, enter-secure-mode, and client-remote-eval")
     (cons "validation_state" "requires-running-server-instance")
     (cons "current_result" "The shell wrapper already drives a real controller runtime; login succeeds or fails entirely against the live `-server` instance and supplied credentials")
-    (cons "next_step" "If a connectable server is already running with `mogan-server-runtime.scm` loaded, call `./mogan-cli create-account` once for the target credentials and then run `./mogan-cli connect`; add `ping` or `new-document` after login succeeds")))
+    (cons "next_step" "If a connectable server is already running with `mogan-server-runtime.scm` loaded, call `./mogan-cli create-account` once for the target credentials and then run `./mogan-cli connect`; add `state`, `move-*`, `select-*`, `undo`, `redo`, `copy`, `cut`, `paste`, `clear-undo-history`, `insert-text`, `delete-*`, `save-buffer`, `write-text`, `buffer-text`, `batch`, `scenario smoke-edit`, `scenario batch-smoke`, `scenario history-smoke`, or `scenario clipboard-smoke` after login succeeds")))
 
 (define *commands*
   `(("status" . ,cmd-status)
@@ -125,7 +134,7 @@
         (make-error
           (string-append "Unknown command: " command)
           (cons "available"
-                "status, workflow, connect, build-client, start-client, start-server, exec-internal, create-account, ping, current-buffer, new-document")))))
+                "status, workflow, connect, build-client, start-client, start-server, exec-internal, create-account, ping, current-buffer, new-document, write-text, buffer-text, state, move-left, move-right, move-up, move-down, move-start, move-end, move-start-line, move-end-line, move-start-paragraph, move-end-paragraph, move-word-left, move-word-right, move-to-line, move-to-column, select-all, select-start, select-end, clear-selection, undo, redo, copy, cut, paste, clear-undo-history, insert-text, insert-return, delete-left, delete-right, save-buffer, switch-buffer, batch, target, session, scenario")))))
 
 (define (show-usage)
   (display "Usage: mogan-cli <command> [args...]")
@@ -153,6 +162,28 @@
   (display "  current-buffer - Query the current buffer from the running Mogan instance")
   (newline)
   (display "  new-document  - Create a new document through the running Mogan instance")
+  (newline)
+  (display "  write-text    - Replace the current buffer body with plain text")
+  (newline)
+  (display "  buffer-text   - Read back the current buffer body as plain text")
+  (newline)
+  (display "  state         - Inspect buffer, cursor, selection, and text state")
+  (newline)
+  (display "  move/select   - Cursor, selection, history, clipboard, insert, delete, save, and switch primitives")
+  (newline)
+  (display "  batch         - Run a sequence of control commands against one target")
+  (newline)
+  (display "  target        - Save, show, list, delete, or use a named target profile")
+  (newline)
+  (display "  session       - Alias for target")
+  (newline)
+  (display "  scenario      - Run a named batch workflow")
+  (newline)
+  (display "  scenario batch-smoke - Run a target-backed low-level smoke workflow")
+  (newline)
+  (display "  scenario history-smoke - Run a target-backed undo/redo workflow")
+  (newline)
+  (display "  scenario clipboard-smoke - Run a target-backed clipboard workflow")
   (newline))
 
 (define (script-arg? arg)

@@ -23,6 +23,13 @@ LIVE_PSEUDO="${MOGAN_TEST_PSEUDO:-test-user}"
 LIVE_NAME="${MOGAN_TEST_NAME:-Test User}"
 LIVE_PASS="${MOGAN_TEST_PASS:-test-pass}"
 LIVE_EMAIL="${MOGAN_TEST_EMAIL:-test@example.com}"
+TARGET_TEST_DIR="$(mktemp -d)"
+
+cleanup() {
+  rm -rf "$TARGET_TEST_DIR"
+}
+
+trap cleanup EXIT
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -142,19 +149,98 @@ else
   fail "create-account dry-run did not print the expected command: $CREATE_ACCOUNT_OUTPUT"
 fi
 
-echo "Test 13: service dry-runs build the expected controller commands..."
+echo "Test 13: target profiles store and replay runtime defaults..."
+TARGET_SAVE_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI target save smoke "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_NAME" "$LIVE_PASS" "$LIVE_EMAIL" 2>&1) || true
+TARGET_SHOW_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI target show smoke 2>&1) || true
+TARGET_LIST_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI target list 2>&1) || true
+TARGET_RUN_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI target run smoke state --dry-run 2>&1) || true
+TARGET_SCENARIO_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI target run smoke scenario smoke-edit --dry-run 2>&1) || true
+if [[ -f "$TARGET_TEST_DIR/smoke.target" ]] &&
+   echo "$TARGET_SHOW_OUTPUT" | grep -q "host=$LIVE_HOST" &&
+   echo "$TARGET_SHOW_OUTPUT" | grep -q "pseudo=$LIVE_PSEUDO" &&
+   echo "$TARGET_LIST_OUTPUT" | grep -q 'smoke' &&
+   echo "$TARGET_RUN_OUTPUT" | grep -q 'mogan-test-state' &&
+   echo "$TARGET_SCENARIO_OUTPUT" | grep -q 'mogan-test-smoke-edit'; then
+  pass "Target profiles can be saved, shown, listed, and replayed"
+else
+  fail "Target profile workflow failed: $TARGET_SAVE_OUTPUT | $TARGET_SHOW_OUTPUT | $TARGET_LIST_OUTPUT | $TARGET_RUN_OUTPUT | $TARGET_SCENARIO_OUTPUT"
+fi
+
+echo "Test 14: batch dry-runs chain low-level commands..."
+BATCH_DRY_RUN_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI batch smoke --dry-run -- new-document -- insert-text "hello from mogan-test" -- move-end -- insert-text "!" -- buffer-text 2>&1) || true
+SCENARIO_BATCH_DRY_RUN_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI scenario batch-smoke smoke --dry-run 2>&1) || true
+SCENARIO_HISTORY_DRY_RUN_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI scenario history-smoke smoke --dry-run 2>&1) || true
+SCENARIO_CLIPBOARD_DRY_RUN_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI scenario clipboard-smoke smoke --dry-run 2>&1) || true
+if echo "$BATCH_DRY_RUN_OUTPUT" | grep -q 'mogan-test-new-document' &&
+   echo "$BATCH_DRY_RUN_OUTPUT" | grep -q 'mogan-test-move-end' &&
+   echo "$BATCH_DRY_RUN_OUTPUT" | grep -q 'mogan-test-insert-text' &&
+   echo "$BATCH_DRY_RUN_OUTPUT" | grep -q 'mogan-test-buffer-text' &&
+   echo "$SCENARIO_BATCH_DRY_RUN_OUTPUT" | grep -q 'mogan-test-new-document' &&
+   echo "$SCENARIO_BATCH_DRY_RUN_OUTPUT" | grep -q 'mogan-test-buffer-text' &&
+    echo "$SCENARIO_HISTORY_DRY_RUN_OUTPUT" | grep -q 'mogan-test-history-undo' &&
+    echo "$SCENARIO_HISTORY_DRY_RUN_OUTPUT" | grep -q 'mogan-test-history-redo' &&
+    echo "$SCENARIO_HISTORY_DRY_RUN_OUTPUT" | grep -q 'mogan-test-clear-history' &&
+    echo "$SCENARIO_CLIPBOARD_DRY_RUN_OUTPUT" | grep -q 'mogan-test-clipboard-copy' &&
+    echo "$SCENARIO_CLIPBOARD_DRY_RUN_OUTPUT" | grep -q 'mogan-test-clipboard-paste'; then
+  pass "Batch dry-runs print the expected chained controller commands"
+else
+  fail "Batch dry-run workflow failed: $BATCH_DRY_RUN_OUTPUT | $SCENARIO_BATCH_DRY_RUN_OUTPUT | $SCENARIO_HISTORY_DRY_RUN_OUTPUT | $SCENARIO_CLIPBOARD_DRY_RUN_OUTPUT"
+fi
+
+echo "Test 15: control dry-runs build the expected controller commands..."
 PING_OUTPUT=$($CLI ping --dry-run 2>&1) || true
 CURRENT_BUFFER_OUTPUT=$($CLI current-buffer --dry-run 2>&1) || true
 NEW_DOCUMENT_OUTPUT=$($CLI new-document --dry-run 2>&1) || true
+WRITE_TEXT_OUTPUT=$($CLI write-text --dry-run 2>&1) || true
+BUFFER_TEXT_OUTPUT=$($CLI buffer-text --dry-run 2>&1) || true
+STATE_OUTPUT=$($CLI state --dry-run 2>&1) || true
+MOVE_LEFT_OUTPUT=$($CLI move-left --dry-run 2>&1) || true
+MOVE_TO_LINE_OUTPUT=$($CLI move-to-line --dry-run 2>&1) || true
+SELECT_ALL_OUTPUT=$($CLI select-all --dry-run 2>&1) || true
+INSERT_TEXT_OUTPUT=$($CLI insert-text --dry-run 2>&1) || true
+DELETE_LEFT_OUTPUT=$($CLI delete-left --dry-run 2>&1) || true
+SAVE_BUFFER_OUTPUT=$($CLI save-buffer --dry-run 2>&1) || true
+SWITCH_BUFFER_OUTPUT=$($CLI switch-buffer --dry-run 2>&1) || true
+UNDO_OUTPUT=$($CLI undo --dry-run 2>&1) || true
+REDO_OUTPUT=$($CLI redo --dry-run 2>&1) || true
+COPY_OUTPUT=$($CLI copy --dry-run 2>&1) || true
+CUT_OUTPUT=$($CLI cut --dry-run 2>&1) || true
+PASTE_OUTPUT=$($CLI paste --dry-run 2>&1) || true
+CLEAR_UNDO_HISTORY_OUTPUT=$($CLI clear-undo-history --dry-run 2>&1) || true
 if echo "$PING_OUTPUT" | grep -q 'mogan-test-ping' &&
    echo "$CURRENT_BUFFER_OUTPUT" | grep -q 'mogan-test-current-buffer' &&
-   echo "$NEW_DOCUMENT_OUTPUT" | grep -q 'mogan-test-new-document'; then
-  pass "Service dry-runs print the expected controller commands"
+   echo "$NEW_DOCUMENT_OUTPUT" | grep -q 'mogan-test-new-document' &&
+   echo "$WRITE_TEXT_OUTPUT" | grep -q 'mogan-test-write-text' &&
+   echo "$BUFFER_TEXT_OUTPUT" | grep -q 'mogan-test-buffer-text' &&
+   echo "$STATE_OUTPUT" | grep -q 'mogan-test-state' &&
+   echo "$MOVE_LEFT_OUTPUT" | grep -q 'mogan-test-move-left' &&
+   echo "$MOVE_TO_LINE_OUTPUT" | grep -q 'mogan-test-move-to-line' &&
+   echo "$SELECT_ALL_OUTPUT" | grep -q 'mogan-test-select-all' &&
+   echo "$INSERT_TEXT_OUTPUT" | grep -q 'mogan-test-insert-text' &&
+   echo "$DELETE_LEFT_OUTPUT" | grep -q 'mogan-test-delete-left' &&
+   echo "$SAVE_BUFFER_OUTPUT" | grep -q 'mogan-test-save-buffer' &&
+   echo "$SWITCH_BUFFER_OUTPUT" | grep -q 'mogan-test-switch-buffer' &&
+    echo "$UNDO_OUTPUT" | grep -q 'mogan-test-history-undo' &&
+    echo "$REDO_OUTPUT" | grep -q 'mogan-test-history-redo' &&
+    echo "$COPY_OUTPUT" | grep -q 'mogan-test-clipboard-copy' &&
+    echo "$CUT_OUTPUT" | grep -q 'mogan-test-clipboard-cut' &&
+    echo "$PASTE_OUTPUT" | grep -q 'mogan-test-clipboard-paste' &&
+    echo "$CLEAR_UNDO_HISTORY_OUTPUT" | grep -q 'mogan-test-clear-history'; then
+  pass "Control dry-runs print the expected controller commands"
 else
   fail "One or more service dry-runs were incorrect"
 fi
 
-echo "Test 14: traces command reports the current debug bundle..."
+echo "Test 16: traces command reports the current debug bundle..."
 TRACES_OUTPUT=$($CLI traces 2>&1) || true
 if echo "$TRACES_OUTPUT" | grep -q '/tmp/mogan-test-connect-trace.log' &&
    echo "$TRACES_OUTPUT" | grep -q '/tmp/mogan-test-server-trace.log' &&
@@ -164,7 +250,7 @@ else
   fail "traces command did not report the expected debug bundle: $TRACES_OUTPUT"
 fi
 
-echo "Test 15: Shell wrapper syntax is valid..."
+echo "Test 17: Shell wrapper syntax is valid..."
 if bash -n "$CLI"; then
   pass "Shell wrapper syntax is valid"
 else
@@ -172,7 +258,7 @@ else
 fi
 
 if [[ $LIVE_MODE -eq 1 ]]; then
-  echo "Test 16: Live create-account reaches the running server..."
+  echo "Test 18: Live create-account reaches the running server..."
   LIVE_CREATE_OUTPUT=$($CLI create-account "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_NAME" "$LIVE_PASS" "$LIVE_EMAIL" 2>&1) || true
   if echo "$LIVE_CREATE_OUTPUT" | grep -q 'status: ok'; then
     pass "Live create-account succeeded against the running server"
@@ -182,7 +268,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
     fail "Live create-account failed: $LIVE_CREATE_OUTPUT"
   fi
 
-  echo "Test 17: Live connect reaches the running server..."
+  echo "Test 19: Live connect reaches the running server..."
   LIVE_CONNECT_OUTPUT=$($CLI connect "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_PASS" 2>&1) || true
   if echo "$LIVE_CONNECT_OUTPUT" | grep -q 'status: ok' &&
      echo "$LIVE_CONNECT_OUTPUT" | grep -q 'value: ready'; then
@@ -192,13 +278,63 @@ if [[ $LIVE_MODE -eq 1 ]]; then
   fi
 
   if [[ $EXPECT_SERVICES -eq 1 ]]; then
-    echo "Test 18: Live ping reaches the custom server runtime..."
+    echo "Test 20: Live ping reaches the custom server runtime..."
     LIVE_PING_OUTPUT=$($CLI ping "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_PASS" 2>&1) || true
     if echo "$LIVE_PING_OUTPUT" | grep -q 'status: ok' &&
        echo "$LIVE_PING_OUTPUT" | grep -q 'value: \"pong\"'; then
       pass "Live ping succeeded against the custom server runtime"
     else
       fail "Live ping failed: $LIVE_PING_OUTPUT"
+    fi
+
+    echo "Test 21: Live smoke scenario reaches the running server..."
+    LIVE_SMOKE_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+      $CLI target save smoke "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_NAME" "$LIVE_PASS" "$LIVE_EMAIL" >/dev/null 2>&1 && \
+      MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+      $CLI target run smoke scenario smoke-edit 2>&1) || true
+    if echo "$LIVE_SMOKE_OUTPUT" | grep -q 'status: ok' &&
+       echo "$LIVE_SMOKE_OUTPUT" | grep -q 'buffer_text' &&
+       echo "$LIVE_SMOKE_OUTPUT" | grep -q 'hello from mogan-test!'; then
+      pass "Live smoke scenario succeeded against the custom server runtime"
+    else
+      fail "Live smoke scenario failed: $LIVE_SMOKE_OUTPUT"
+    fi
+
+    echo "Test 22: Live batch scenario reaches the running server..."
+    LIVE_BATCH_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+      $CLI scenario batch-smoke smoke 2>&1) || true
+    if echo "$LIVE_BATCH_OUTPUT" | grep -q 'status: ok' &&
+       echo "$LIVE_BATCH_OUTPUT" | grep -q 'buffer_text' &&
+       echo "$LIVE_BATCH_OUTPUT" | grep -q 'hello from mogan-test!'; then
+      pass "Live batch scenario succeeded against the custom server runtime"
+    else
+      fail "Live batch scenario failed: $LIVE_BATCH_OUTPUT"
+    fi
+
+    echo "Test 23: Live history scenario reaches the running server..."
+    LIVE_HISTORY_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+      $CLI scenario history-smoke smoke 2>&1) || true
+    if echo "$LIVE_HISTORY_OUTPUT" | grep -q 'status: ok' &&
+       echo "$LIVE_HISTORY_OUTPUT" | grep -q 'buffer_text' &&
+       echo "$LIVE_HISTORY_OUTPUT" | grep -q 'hello' &&
+       echo "$LIVE_HISTORY_OUTPUT" | grep -q 'undo_possibilities' &&
+       echo "$LIVE_HISTORY_OUTPUT" | grep -q 'redo_possibilities'; then
+      pass "Live history scenario succeeded against the custom server runtime"
+    else
+      fail "Live history scenario failed: $LIVE_HISTORY_OUTPUT"
+    fi
+
+    echo "Test 24: Live clipboard scenario reaches the running server..."
+    LIVE_CLIPBOARD_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+      $CLI scenario clipboard-smoke smoke 2>&1) || true
+    if echo "$LIVE_CLIPBOARD_OUTPUT" | grep -q 'status: ok' &&
+       echo "$LIVE_CLIPBOARD_OUTPUT" | grep -q 'buffer_text' &&
+       echo "$LIVE_CLIPBOARD_OUTPUT" | grep -q 'hello' &&
+       echo "$LIVE_CLIPBOARD_OUTPUT" | grep -q 'undo_possibilities' &&
+       echo "$LIVE_CLIPBOARD_OUTPUT" | grep -q 'redo_possibilities'; then
+      pass "Live clipboard scenario succeeded against the custom server runtime"
+    else
+      fail "Live clipboard scenario failed: $LIVE_CLIPBOARD_OUTPUT"
     fi
   fi
 fi
@@ -215,6 +351,16 @@ if [[ $FAILED -eq 0 ]]; then
   echo "  - Inspect account bootstrap with: ./mogan-cli create-account --dry-run"
   echo "  - Inspect connect/login with: ./mogan-cli connect --dry-run"
   echo "  - Inspect server-side test services with: ./mogan-cli ping --dry-run"
+  echo "  - Inspect text round-trip with: ./mogan-cli write-text --dry-run"
+  echo "  - Inspect control primitives with: ./mogan-cli state --dry-run"
+  echo "  - Inspect history primitives with: ./mogan-cli undo --dry-run"
+  echo "  - Inspect clipboard primitives with: ./mogan-cli copy --dry-run"
+  echo "  - Save a target profile with: ./mogan-cli target save smoke"
+  echo "  - Inspect batch workflows with: ./mogan-cli batch smoke -- new-document -- buffer-text"
+  echo "  - Run a smoke scenario with: ./mogan-cli scenario smoke-edit"
+  echo "  - Run the batch scenario with: ./mogan-cli scenario batch-smoke smoke"
+  echo "  - Run the history scenario with: ./mogan-cli scenario history-smoke smoke"
+  echo "  - Run the clipboard scenario with: ./mogan-cli scenario clipboard-smoke smoke"
   echo "  - Inspect trace and runtime files with: ./mogan-cli traces"
   echo "  - Run live validation with: ./validate.sh --live"
   echo "  - Add --expect-services when the target server loaded mogan-server-runtime.scm"

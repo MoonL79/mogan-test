@@ -14,6 +14,12 @@ RUNTIME_OUTPUT="/tmp/mogan-test-runtime-output.log"
 TEXMACS_PATH_DIR="${MOGAN_ROOT}/TeXmacs"
 DEBUG_BINARY="${MOGAN_ROOT}/build/linux/x86_64/debug/moganstem"
 RELEASE_BINARY="${MOGAN_ROOT}/build/linux/x86_64/release/moganstem"
+DEFAULT_HOST="${MOGAN_TEST_HOST:-127.0.0.1}"
+DEFAULT_PSEUDO="${MOGAN_TEST_PSEUDO:-test-user}"
+DEFAULT_NAME="${MOGAN_TEST_NAME:-Test User}"
+DEFAULT_PASS="${MOGAN_TEST_PASS:-test-pass}"
+DEFAULT_EMAIL="${MOGAN_TEST_EMAIL:-test@example.com}"
+TARGET_DIR="${MOGAN_TEST_TARGET_DIR:-$HOME/.config/mogan-test/targets}"
 
 if ! command -v gf >/dev/null 2>&1; then
   echo '{"status":"error","message":"Goldfish Scheme (gf) not found in PATH"}' >&2
@@ -53,6 +59,222 @@ print_runtime_result() {
   echo "value: ${value:-missing runtime result}"
 
   [[ "$status" == "ok" ]]
+}
+
+scheme_escape() {
+  local value="${1-}"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\t'/\\t}"
+  printf '%s' "$value"
+}
+
+target_is_valid_name() {
+  local name="${1-}"
+  [[ -n "$name" ]] && [[ "$name" =~ ^[A-Za-z0-9._-]+$ ]]
+}
+
+target_file_path() {
+  local name="${1-}"
+  printf '%s/%s.target' "$TARGET_DIR" "$name"
+}
+
+target_ensure_dir() {
+  mkdir -p "$TARGET_DIR"
+}
+
+target_save_profile() {
+  local name="$1"
+  local host="$2"
+  local pseudo="$3"
+  local display_name="$4"
+  local passwd="$5"
+  local email="$6"
+  local path
+
+  if ! target_is_valid_name "$name"; then
+    echo "{\"status\":\"error\",\"message\":\"Invalid target name: $name\"}" >&2
+    return 1
+  fi
+
+  target_ensure_dir
+  path="$(target_file_path "$name")"
+  (
+    umask 077
+    {
+      printf 'host\t%s\n' "$host"
+      printf 'pseudo\t%s\n' "$pseudo"
+      printf 'name\t%s\n' "$display_name"
+      printf 'passwd\t%s\n' "$passwd"
+      printf 'email\t%s\n' "$email"
+    } > "$path"
+  )
+}
+
+target_field_value() {
+  local path="$1"
+  local key="$2"
+  awk -F '\t' -v key="$key" '$1 == key { sub("^[^\t]+\t", "", $0); print; exit }' "$path"
+}
+
+target_read_profile() {
+  local name="$1"
+  local path
+  local host
+  local pseudo
+  local display_name
+  local passwd
+  local email
+
+  if ! target_is_valid_name "$name"; then
+    echo "{\"status\":\"error\",\"message\":\"Invalid target name: $name\"}" >&2
+    return 1
+  fi
+
+  path="$(target_file_path "$name")"
+  if [[ ! -f "$path" ]]; then
+    echo "{\"status\":\"error\",\"message\":\"Target not found: $name\"}" >&2
+    return 1
+  fi
+
+  host="$(target_field_value "$path" host)"
+  pseudo="$(target_field_value "$path" pseudo)"
+  display_name="$(target_field_value "$path" name)"
+  passwd="$(target_field_value "$path" passwd)"
+  email="$(target_field_value "$path" email)"
+
+  printf '%s\t%s\t%s\t%s\t%s\n' \
+    "${host:-$DEFAULT_HOST}" \
+    "${pseudo:-$DEFAULT_PSEUDO}" \
+    "${display_name:-$DEFAULT_NAME}" \
+    "${passwd:-$DEFAULT_PASS}" \
+    "${email:-$DEFAULT_EMAIL}"
+}
+
+target_show_profile() {
+  local name="$1"
+  local path
+  local host
+  local pseudo
+  local display_name
+  local passwd
+  local email
+
+  if ! target_is_valid_name "$name"; then
+    echo "{\"status\":\"error\",\"message\":\"Invalid target name: $name\"}" >&2
+    return 1
+  fi
+
+  path="$(target_file_path "$name")"
+  if [[ ! -f "$path" ]]; then
+    echo "{\"status\":\"error\",\"message\":\"Target not found: $name\"}" >&2
+    return 1
+  fi
+
+  host="$(target_field_value "$path" host)"
+  pseudo="$(target_field_value "$path" pseudo)"
+  display_name="$(target_field_value "$path" name)"
+  passwd="$(target_field_value "$path" passwd)"
+  email="$(target_field_value "$path" email)"
+
+  printf 'name=%s\nhost=%s\npseudo=%s\ndisplay_name=%s\npasswd=%s\nemail=%s\n' \
+    "$name" \
+    "${host:-$DEFAULT_HOST}" \
+    "${pseudo:-$DEFAULT_PSEUDO}" \
+    "${display_name:-$DEFAULT_NAME}" \
+    "${passwd:-$DEFAULT_PASS}" \
+    "${email:-$DEFAULT_EMAIL}"
+}
+
+target_list_profiles() {
+  target_ensure_dir
+  find "$TARGET_DIR" -maxdepth 1 -type f -name '*.target' -printf '%f\n' 2>/dev/null | sed 's/\.target$//' | sort
+}
+
+target_run_command() {
+  local name="$1"
+  shift
+
+  local profile
+  local host
+  local pseudo
+  local display_name
+  local passwd
+  local email
+
+  profile="$(target_read_profile "$name")" || return 1
+  IFS=$'\t' read -r host pseudo display_name passwd email <<< "$profile"
+  MOGAN_TEST_HOST="$host" \
+  MOGAN_TEST_PSEUDO="$pseudo" \
+  MOGAN_TEST_NAME="$display_name" \
+  MOGAN_TEST_PASS="$passwd" \
+  MOGAN_TEST_EMAIL="$email" \
+  MOGAN_TEST_DRY_RUN="${MOGAN_TEST_DRY_RUN:-0}" \
+  "$0" "$@"
+}
+
+batch_run_step() {
+  local target_name="$1"
+  local dry_run="${2:-false}"
+  local step_index="${3:-0}"
+  shift 3
+
+  local -a step_args=("$@")
+
+  if [[ ${#step_args[@]} -eq 0 ]]; then
+    echo '{"status":"error","message":"Empty batch step"}' >&2
+    return 1
+  fi
+
+  printf '== batch step %s: ' "$step_index" >&2
+  printf '%q ' "${step_args[@]}" >&2
+  printf '\n' >&2
+
+  if [[ "$dry_run" == "true" ]]; then
+    MOGAN_TEST_DRY_RUN=1 target_run_command "$target_name" "${step_args[@]}"
+    return $?
+  fi
+
+  target_run_command "$target_name" "${step_args[@]}"
+}
+
+build_remote_runtime_expr() {
+  local remote_command="$1"
+  local server_name="${2:-127.0.0.1}"
+  local pseudo="${3:-test-user}"
+  local passwd="${4:-test-pass}"
+  printf '(load "%s") (mogan-test-run-command "%s" "%s" "%s" '\''%s)' \
+    "$RUNTIME_SCRIPT" \
+    "$(scheme_escape "$server_name")" \
+    "$(scheme_escape "$pseudo")" \
+    "$(scheme_escape "$passwd")" \
+    "$remote_command"
+}
+
+run_remote_runtime_command() {
+  local remote_command="$1"
+  local server_name="${2:-127.0.0.1}"
+  local pseudo="${3:-test-user}"
+  local passwd="${4:-test-pass}"
+  local dry_run="${5:-}"
+  local runtime_expr
+  local binary_path
+
+  runtime_expr="$(build_remote_runtime_expr "$remote_command" "$server_name" "$pseudo" "$passwd")"
+  if [[ "$dry_run" == "--dry-run" ]]; then
+    binary_path="$(resolve_mogan_binary || true)"
+    if [[ -z "$binary_path" ]]; then
+      echo '{"status":"error","message":"Built Mogan client not found. Run `./mogan-cli build-client` first."}' >&2
+      exit 1
+    fi
+
+    printf 'cd %s && TEXMACS_PATH=%q %q -platform minimal -d -debug-bench -x %q\n' \
+      "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
+    exit 0
+  fi
+
+  run_runtime_command "$runtime_expr" "minimal"
 }
 
 show_file_section() {
@@ -192,20 +414,230 @@ case "$command_name" in
     fi
     run_runtime_command "$runtime_expr" "minimal"
     ;;
+  target|session)
+    shift || true
+    target_action="${1:-}"
+    case "$target_action" in
+      save|add|open)
+        target_name="${2:-}"
+        server_name="${3:-$DEFAULT_HOST}"
+        pseudo="${4:-$DEFAULT_PSEUDO}"
+        display_name="${5:-$DEFAULT_NAME}"
+        passwd="${6:-$DEFAULT_PASS}"
+        email="${7:-$DEFAULT_EMAIL}"
+        if [[ -z "$target_name" ]]; then
+          echo '{"status":"error","message":"Target name is required"}' >&2
+          exit 1
+        fi
+        target_save_profile "$target_name" "$server_name" "$pseudo" "$display_name" "$passwd" "$email"
+        ;;
+      show)
+        target_name="${2:-}"
+        if [[ -z "$target_name" ]]; then
+          echo '{"status":"error","message":"Target name is required"}' >&2
+          exit 1
+        fi
+        target_show_profile "$target_name"
+        ;;
+      list)
+        target_list_profiles
+        ;;
+      delete|remove)
+        target_name="${2:-}"
+        if [[ -z "$target_name" ]]; then
+          echo '{"status":"error","message":"Target name is required"}' >&2
+          exit 1
+        fi
+        if ! target_is_valid_name "$target_name"; then
+          echo "{\"status\":\"error\",\"message\":\"Invalid target name: $target_name\"}" >&2
+          exit 1
+        fi
+        rm -f "$(target_file_path "$target_name")"
+        ;;
+      run|use|exec)
+        target_name="${2:-}"
+        if [[ -z "$target_name" ]]; then
+          echo '{"status":"error","message":"Target name is required"}' >&2
+          exit 1
+        fi
+        if [[ $# -lt 3 ]]; then
+          echo '{"status":"error","message":"Target run requires a command"}' >&2
+          exit 1
+        fi
+        shift 2
+        target_run_command "$target_name" "$@"
+        ;;
+      "")
+        cat <<'EOF'
+Usage: mogan-cli target <save|show|list|delete|run> [...]
+EOF
+        exit 1
+        ;;
+      *)
+        echo "{\"status\":\"error\",\"message\":\"Unknown target action: $target_action\"}" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  scenario)
+    shift || true
+    scenario_name="${1:-}"
+    case "$scenario_name" in
+      list)
+        cat <<'EOF'
+smoke-edit
+batch-smoke
+history-smoke
+clipboard-smoke
+EOF
+        ;;
+      smoke-edit)
+        shift || true
+        if [[ "${1:-}" == "--dry-run" ]]; then
+          set -- "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_PASS" "--dry-run"
+        fi
+        server_name="${1:-$DEFAULT_HOST}"
+        pseudo="${2:-$DEFAULT_PSEUDO}"
+        passwd="${3:-$DEFAULT_PASS}"
+        remote_command="(mogan-test-smoke-edit)"
+        run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "${4:-}"
+        ;;
+      batch-smoke)
+        shift || true
+        target_name="smoke"
+        dry_run_flag=""
+        if [[ $# -gt 0 ]]; then
+          if [[ "${1:-}" == "--dry-run" ]]; then
+            dry_run_flag="--dry-run"
+          else
+            target_name="$1"
+            shift || true
+            if [[ "${1:-}" == "--dry-run" ]]; then
+              dry_run_flag="--dry-run"
+            fi
+          fi
+        fi
+        batch_args=(batch "$target_name")
+        if [[ -n "$dry_run_flag" ]]; then
+          batch_args+=("$dry_run_flag")
+        fi
+        batch_args+=(-- new-document -- write-text "hello from mogan-test" -- move-end -- insert-text "!" -- buffer-text)
+        exec "$0" "${batch_args[@]}"
+        ;;
+      history-smoke)
+        shift || true
+        target_name="smoke"
+        dry_run_flag=""
+        if [[ $# -gt 0 ]]; then
+          if [[ "${1:-}" == "--dry-run" ]]; then
+            dry_run_flag="--dry-run"
+          else
+            target_name="$1"
+            shift || true
+            if [[ "${1:-}" == "--dry-run" ]]; then
+              dry_run_flag="--dry-run"
+            fi
+          fi
+        fi
+        batch_args=(batch "$target_name")
+        if [[ -n "$dry_run_flag" ]]; then
+          batch_args+=("$dry_run_flag")
+        fi
+        batch_args+=(-- new-document -- insert-text "hello" -- undo -- redo -- clear-undo-history -- state)
+        exec "$0" "${batch_args[@]}"
+        ;;
+      clipboard-smoke)
+        shift || true
+        target_name="smoke"
+        dry_run_flag=""
+        if [[ $# -gt 0 ]]; then
+          if [[ "${1:-}" == "--dry-run" ]]; then
+            dry_run_flag="--dry-run"
+          else
+            target_name="$1"
+            shift || true
+            if [[ "${1:-}" == "--dry-run" ]]; then
+              dry_run_flag="--dry-run"
+            fi
+          fi
+        fi
+        batch_args=(batch "$target_name")
+        if [[ -n "$dry_run_flag" ]]; then
+          batch_args+=("$dry_run_flag")
+        fi
+        batch_args+=(-- new-document -- write-text "hello" -- select-all -- copy -- new-document -- paste -- state)
+        exec "$0" "${batch_args[@]}"
+        ;;
+      "")
+        cat <<'EOF'
+Usage: mogan-cli scenario <list|smoke-edit|batch-smoke|history-smoke|clipboard-smoke> [args...]
+EOF
+        exit 1
+        ;;
+      *)
+        echo "{\"status\":\"error\",\"message\":\"Unknown scenario: $scenario_name\"}" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  batch)
+    shift || true
+    target_name="${1:-}"
+    if [[ -z "$target_name" ]]; then
+      echo '{"status":"error","message":"Target name is required"}' >&2
+      exit 1
+    fi
+    shift || true
+    batch_dry_run="false"
+    if [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]] || [[ "${1:-}" == "--dry-run" ]]; then
+      batch_dry_run="true"
+      shift || true
+    fi
+    if [[ "${1:-}" == "--" ]]; then
+      shift || true
+    fi
+    if [[ $# -eq 0 ]]; then
+      echo '{"status":"error","message":"Batch requires at least one step"}' >&2
+      exit 1
+    fi
+    current_step=()
+    step_index=0
+    while [[ $# -gt 0 ]]; do
+      if [[ "$1" == "--" ]]; then
+        if [[ ${#current_step[@]} -gt 0 ]]; then
+          step_index=$((step_index + 1))
+          batch_run_step "$target_name" "$batch_dry_run" "$step_index" "${current_step[@]}"
+          current_step=()
+        fi
+      else
+        current_step+=("$1")
+      fi
+      shift || true
+    done
+    if [[ ${#current_step[@]} -gt 0 ]]; then
+      step_index=$((step_index + 1))
+      batch_run_step "$target_name" "$batch_dry_run" "$step_index" "${current_step[@]}"
+    fi
+    ;;
   create-account)
     shift || true
     if [[ "${1:-}" == "--dry-run" ]]; then
-      set -- "127.0.0.1" "test-user" "Test User" "test-pass" "test@example.com" "--dry-run"
+      set -- "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_NAME" "$DEFAULT_PASS" "$DEFAULT_EMAIL" "--dry-run"
     fi
-    server_name="${1:-127.0.0.1}"
-    pseudo="${2:-test-user}"
-    name="${3:-Test User}"
-    passwd="${4:-test-pass}"
-    email="${5:-test@example.com}"
-    runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-create-account \"$server_name\" \"$pseudo\" \"$name\" \"$passwd\" \"$email\")"
-    if [[ "${6:-}" == "--dry-run" ]] || [[ "${1:-}" == "--dry-run" ]]; then
+    server_name="${1:-$DEFAULT_HOST}"
+    pseudo="${2:-$DEFAULT_PSEUDO}"
+    name="${3:-$DEFAULT_NAME}"
+    passwd="${4:-$DEFAULT_PASS}"
+    email="${5:-$DEFAULT_EMAIL}"
+    runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-create-account \"$(scheme_escape "$server_name")\" \"$(scheme_escape "$pseudo")\" \"$(scheme_escape "$name")\" \"$(scheme_escape "$passwd")\" \"$(scheme_escape "$email")\")"
+    if [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]] || [[ "${6:-}" == "--dry-run" ]] || [[ "${1:-}" == "--dry-run" ]]; then
       binary_path="$(resolve_mogan_binary || true)"
-      printf 'cd %s && TEXMACS_PATH=%q %q -platform minimal -d -debug-bench -x %q\n' "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
+      if [[ -z "$binary_path" ]]; then
+        echo '{"status":"error","message":"Built Mogan client not found. Run `./mogan-cli build-client` first."}' >&2
+        exit 1
+      fi
+      printf 'cd %s && TEXMACS_PATH=%q %q -platform minimal -d -debug-bench -x %q\n' \
+        "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
       exit 0
     fi
     run_runtime_command "$runtime_expr" "minimal"
@@ -213,41 +645,214 @@ case "$command_name" in
   connect)
     shift || true
     if [[ "${1:-}" == "--dry-run" ]]; then
-      set -- "127.0.0.1" "test-user" "test-pass" "--dry-run"
+      set -- "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_PASS" "--dry-run"
     fi
-    server_name="${1:-127.0.0.1}"
-    pseudo="${2:-test-user}"
-    passwd="${3:-test-pass}"
-    runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-connect \"$server_name\" \"$pseudo\" \"$passwd\")"
-    if [[ "${4:-}" == "--dry-run" ]] || [[ "${1:-}" == "--dry-run" ]]; then
+    server_name="${1:-$DEFAULT_HOST}"
+    pseudo="${2:-$DEFAULT_PSEUDO}"
+    passwd="${3:-$DEFAULT_PASS}"
+    runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-connect \"$(scheme_escape "$server_name")\" \"$(scheme_escape "$pseudo")\" \"$(scheme_escape "$passwd")\")"
+    if [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]] || [[ "${4:-}" == "--dry-run" ]] || [[ "${1:-}" == "--dry-run" ]]; then
       binary_path="$(resolve_mogan_binary || true)"
-      printf 'cd %s && TEXMACS_PATH=%q %q -platform minimal -d -debug-bench -x %q\n' "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
+      if [[ -z "$binary_path" ]]; then
+        echo '{"status":"error","message":"Built Mogan client not found. Run `./mogan-cli build-client` first."}' >&2
+        exit 1
+      fi
+      printf 'cd %s && TEXMACS_PATH=%q %q -platform minimal -d -debug-bench -x %q\n' \
+        "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
       exit 0
     fi
     run_runtime_command "$runtime_expr" "minimal"
     ;;
-  ping|current-buffer|new-document)
+  ping|current-buffer|new-document|buffer-text|state|move-left|move-right|move-up|move-down|move-start|move-end|move-start-line|move-end-line|move-start-paragraph|move-end-paragraph|move-word-left|move-word-right|select-all|select-start|select-end|clear-selection|undo|redo|copy|cut|paste|clear-undo-history|insert-return|delete-left|delete-right|save-buffer)
     shift || true
+    dry_run_flag="${4:-}"
     if [[ "${1:-}" == "--dry-run" ]]; then
-      set -- "127.0.0.1" "test-user" "test-pass" "--dry-run"
+      set -- "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_PASS" "--dry-run"
+      dry_run_flag="--dry-run"
+    elif [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]]; then
+      dry_run_flag="--dry-run"
     fi
-    server_name="${1:-127.0.0.1}"
-    pseudo="${2:-test-user}"
-    passwd="${3:-test-pass}"
-    remote_command="(mogan-test-ping)"
-    if [[ "$command_name" == "current-buffer" ]]; then
-      remote_command="(mogan-test-current-buffer)"
+    server_name="${1:-$DEFAULT_HOST}"
+    pseudo="${2:-$DEFAULT_PSEUDO}"
+    passwd="${3:-$DEFAULT_PASS}"
+    case "$command_name" in
+      ping)
+        remote_command="(mogan-test-ping)"
+        ;;
+      current-buffer)
+        remote_command="(mogan-test-current-buffer)"
+        ;;
+      new-document)
+        remote_command="(mogan-test-new-document)"
+        ;;
+      buffer-text)
+        remote_command="(mogan-test-buffer-text)"
+        ;;
+      state)
+        remote_command="(mogan-test-state)"
+        ;;
+      move-left)
+        remote_command="(mogan-test-move-left)"
+        ;;
+      move-right)
+        remote_command="(mogan-test-move-right)"
+        ;;
+      move-up)
+        remote_command="(mogan-test-move-up)"
+        ;;
+      move-down)
+        remote_command="(mogan-test-move-down)"
+        ;;
+      move-start)
+        remote_command="(mogan-test-move-start)"
+        ;;
+      move-end)
+        remote_command="(mogan-test-move-end)"
+        ;;
+      move-start-line)
+        remote_command="(mogan-test-move-start-line)"
+        ;;
+      move-end-line)
+        remote_command="(mogan-test-move-end-line)"
+        ;;
+      move-start-paragraph)
+        remote_command="(mogan-test-move-start-paragraph)"
+        ;;
+      move-end-paragraph)
+        remote_command="(mogan-test-move-end-paragraph)"
+        ;;
+      move-word-left)
+        remote_command="(mogan-test-move-word-left)"
+        ;;
+      move-word-right)
+        remote_command="(mogan-test-move-word-right)"
+        ;;
+      select-all)
+        remote_command="(mogan-test-select-all)"
+        ;;
+      select-start)
+        remote_command="(mogan-test-select-start)"
+        ;;
+      select-end)
+        remote_command="(mogan-test-select-end)"
+        ;;
+      clear-selection)
+        remote_command="(mogan-test-clear-selection)"
+        ;;
+      undo)
+        remote_command="(mogan-test-history-undo)"
+        ;;
+      redo)
+        remote_command="(mogan-test-history-redo)"
+        ;;
+      copy)
+        remote_command="(mogan-test-clipboard-copy)"
+        ;;
+      cut)
+        remote_command="(mogan-test-clipboard-cut)"
+        ;;
+      paste)
+        remote_command="(mogan-test-clipboard-paste)"
+        ;;
+      clear-undo-history)
+        remote_command="(mogan-test-clear-history)"
+        ;;
+      insert-return)
+        remote_command="(mogan-test-insert-return)"
+        ;;
+      delete-left)
+        remote_command="(mogan-test-delete-left)"
+        ;;
+      delete-right)
+        remote_command="(mogan-test-delete-right)"
+        ;;
+      save-buffer)
+        remote_command="(mogan-test-save-buffer)"
+        ;;
+    esac
+    run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
+    ;;
+  write-text)
+    shift || true
+    dry_run_flag="${5:-}"
+    if [[ "${1:-}" == "--dry-run" ]]; then
+      set -- "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_PASS" "hello from mogan-test" "--dry-run"
+      dry_run_flag="--dry-run"
+    elif [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]]; then
+      dry_run_flag="--dry-run"
     fi
-    if [[ "$command_name" == "new-document" ]]; then
-      remote_command="(mogan-test-new-document)"
+    if [[ $# -le 1 ]]; then
+      server_name="$DEFAULT_HOST"
+      pseudo="$DEFAULT_PSEUDO"
+      passwd="$DEFAULT_PASS"
+      text="${1:-hello from mogan-test}"
+    else
+      server_name="${1:-$DEFAULT_HOST}"
+      pseudo="${2:-$DEFAULT_PSEUDO}"
+      passwd="${3:-$DEFAULT_PASS}"
+      text="${4:-hello from mogan-test}"
     fi
-    runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-run-command \"$server_name\" \"$pseudo\" \"$passwd\" '$remote_command)"
-    if [[ "${4:-}" == "--dry-run" ]] || [[ "${1:-}" == "--dry-run" ]]; then
-      binary_path="$(resolve_mogan_binary || true)"
-      printf 'cd %s && TEXMACS_PATH=%q %q -platform minimal -d -debug-bench -x %q\n' "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
-      exit 0
-    fi
-    run_runtime_command "$runtime_expr" "minimal"
+    remote_command="(mogan-test-write-text \"$(scheme_escape "$text")\")"
+    run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
+    ;;
+  move-to-line|move-to-column|insert-text|switch-buffer)
+    shift || true
+    case "$command_name" in
+      move-to-line|move-to-column)
+        dry_run_flag="${5:-}"
+        if [[ "${1:-}" == "--dry-run" ]]; then
+          set -- "1" "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_PASS" "--dry-run"
+          dry_run_flag="--dry-run"
+        elif [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]]; then
+          dry_run_flag="--dry-run"
+        fi
+        control_value="${1:-1}"
+        server_name="${2:-$DEFAULT_HOST}"
+        pseudo="${3:-$DEFAULT_PSEUDO}"
+        passwd="${4:-$DEFAULT_PASS}"
+        ;;
+      insert-text)
+        dry_run_flag="${5:-}"
+        if [[ "${1:-}" == "--dry-run" ]]; then
+          set -- "hello from mogan-test" "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_PASS" "--dry-run"
+          dry_run_flag="--dry-run"
+        elif [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]]; then
+          dry_run_flag="--dry-run"
+        fi
+        control_value="${1:-hello from mogan-test}"
+        server_name="${2:-$DEFAULT_HOST}"
+        pseudo="${3:-$DEFAULT_PSEUDO}"
+        passwd="${4:-$DEFAULT_PASS}"
+        ;;
+      switch-buffer)
+        dry_run_flag="${5:-}"
+        if [[ "${1:-}" == "--dry-run" ]]; then
+          set -- "tmfs://dummy" "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_PASS" "--dry-run"
+          dry_run_flag="--dry-run"
+        elif [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]]; then
+          dry_run_flag="--dry-run"
+        fi
+        control_value="${1:-tmfs://dummy}"
+        server_name="${2:-$DEFAULT_HOST}"
+        pseudo="${3:-$DEFAULT_PSEUDO}"
+        passwd="${4:-$DEFAULT_PASS}"
+        ;;
+    esac
+    case "$command_name" in
+      move-to-line)
+        remote_command="(mogan-test-move-to-line \"$(scheme_escape "$control_value")\")"
+        ;;
+      move-to-column)
+        remote_command="(mogan-test-move-to-column \"$(scheme_escape "$control_value")\")"
+        ;;
+      insert-text)
+        remote_command="(mogan-test-insert-text \"$(scheme_escape "$control_value")\")"
+        ;;
+      switch-buffer)
+        remote_command="(mogan-test-switch-buffer \"$(scheme_escape "$control_value")\")"
+        ;;
+    esac
+    run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
     ;;
   traces)
     shift || true
@@ -268,6 +873,26 @@ Commands:
   ping           - Run the server-side `mogan-test-ping` service
   current-buffer - Query the current buffer from the running Mogan instance
   new-document   - Create a new document through the running Mogan instance
+  write-text     - Replace the current buffer with plain text content
+  buffer-text    - Read back the current buffer text content
+  state          - Inspect buffer, cursor, selection, and text state
+  move-*         - Cursor movement primitives
+  select-*       - Selection primitives
+  undo/redo      - History primitives
+  copy/cut/paste - Clipboard primitives
+  clear-undo-history - Reset the current edit history
+  insert-text    - Insert text at the cursor
+  insert-return  - Insert a raw return
+  delete-*       - Delete at the cursor
+  save-buffer    - Save the current buffer
+  switch-buffer  - Switch to another buffer
+  batch          - Run a sequence of control commands against one target
+  target         - Save, show, list, delete, or use a named target profile
+  session        - Alias for target
+  scenario       - Run a named batch workflow
+  scenario batch-smoke - Run a target-backed low-level smoke workflow
+  scenario history-smoke - Run a target-backed undo/redo workflow
+  scenario clipboard-smoke - Run a target-backed clipboard workflow
   traces         - Print the current connect/server trace bundle
 EOF
     exit 0

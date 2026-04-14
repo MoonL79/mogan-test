@@ -126,6 +126,48 @@ Mogan 命令行控制与测试平台
 - 查询动作结果或当前状态
 - 将结果以可断言的形式返回给命令行
 
+## 控制原语
+
+平台需要优先暴露这些可脚本化的低级能力，而不是只停留在高层封装：
+
+- `state`
+- `move-left` / `move-right` / `move-up` / `move-down`
+- `move-start` / `move-end`
+- `move-start-line` / `move-end-line`
+- `move-start-paragraph` / `move-end-paragraph`
+- `move-word-left` / `move-word-right`
+- `move-to-line` / `move-to-column`
+- `select-all` / `select-start` / `select-end` / `clear-selection`
+- `undo` / `redo`
+- `copy` / `cut` / `paste`
+- `clear-undo-history`
+- `insert-text` / `insert-return`
+- `delete-left` / `delete-right`
+- `save-buffer`
+- `switch-buffer`
+- `batch`
+- `write-text` / `buffer-text` 作为更高层的兼容命令
+
+## Target 和 Scenario
+
+平台还需要支持命名 target profile，用来复用一组 live server 连接参数：
+
+- `target save`
+- `target show`
+- `target list`
+- `target run`
+
+此外需要一个最小 scenario 入口，用来把多个控制原语串成一条可脚本化工作流：
+
+- `scenario smoke-edit`
+- `scenario batch-smoke`
+- `scenario history-smoke`
+- `scenario clipboard-smoke`
+
+`batch` 命令应当支持在同一个 target profile 上串行执行多个步骤。
+
+这些命令应该返回可脚本化结果，至少包含当前缓冲区、光标、选区、编辑历史和文本状态。
+
 如果真实 Mogan 能力暂时无法完整接入，则必须明确：
 
 - 哪一层已经是真实调用
@@ -149,6 +191,9 @@ Mogan 命令行控制与测试平台
 - 平台能够启动或连接到真实 Mogan
 - 平台复用了现有的 Mogan 本地 server/client 机制，或明确说明了尚未复用的阻塞点
 - 至少存在一条“命令行请求 -> 路由 -> 运行中的 Mogan 调用层 -> 结果”链路
+- 至少存在一条低级控制链路，例如 `state -> move-* -> insert-text -> buffer-text`
+- 至少存在一个可复用的 target profile 和一个可运行的 scenario workflow
+- 至少存在一个可脚本化的 batch workflow
 - 结果可被脚本化验证，而不是只靠人工观察
 - 文档能说明平台目标、当前边界、真实接入点和仍然是 stub 的部分
 

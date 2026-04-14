@@ -28,6 +28,26 @@
 - `./mogan-cli ping`
 - `./mogan-cli current-buffer`
 - `./mogan-cli new-document`
+- `./mogan-cli write-text 127.0.0.1 test-user test-pass "hello from mogan-test"`
+- `./mogan-cli buffer-text`
+- `./mogan-cli state`
+- `./mogan-cli move-end`
+- `./mogan-cli insert-text 127.0.0.1 test-user test-pass "!"`
+- `./mogan-cli select-all`
+- `./mogan-cli undo`
+- `./mogan-cli redo`
+- `./mogan-cli copy`
+- `./mogan-cli cut`
+- `./mogan-cli paste`
+- `./mogan-cli clear-undo-history`
+- `./mogan-cli save-buffer`
+- `./mogan-cli batch smoke -- new-document -- insert-text "hello" -- move-end -- insert-text "!" -- buffer-text`
+- `./mogan-cli target save smoke`
+- `./mogan-cli target run smoke state`
+- `./mogan-cli scenario smoke-edit`
+- `./mogan-cli scenario batch-smoke smoke`
+- `./mogan-cli scenario history-smoke smoke`
+- `./mogan-cli scenario clipboard-smoke smoke`
 - `./mogan-cli traces`
 
 这些命令都支持 dry-run 形式，用来打印实际执行的运行时命令，而不是直接运行。
@@ -48,3 +68,41 @@
 `mogan-server-runtime.scm` 中的 server 侧登录 shim。
 这样可以让 live 控制链路保持稳定，同时把底层 TMDB 账户流程保留为
 独立的后续问题。
+
+## 当前控制片段
+
+除了 `ping` 和缓冲区身份检查之外，当前测试运行时还暴露了一组
+低级编辑、历史和剪贴板原语：
+
+1. `./mogan-cli new-document`
+2. `./mogan-cli write-text 127.0.0.1 test-user test-pass "hello from mogan-test"`
+3. `./mogan-cli state 127.0.0.1 test-user test-pass`
+4. `./mogan-cli move-end 127.0.0.1 test-user test-pass`
+5. `./mogan-cli insert-text 127.0.0.1 test-user test-pass "!"`
+6. `./mogan-cli buffer-text 127.0.0.1 test-user test-pass`
+7. `./mogan-cli undo 127.0.0.1 test-user test-pass`
+8. `./mogan-cli redo 127.0.0.1 test-user test-pass`
+9. `./mogan-cli copy 127.0.0.1 test-user test-pass`
+10. `./mogan-cli cut 127.0.0.1 test-user test-pass`
+11. `./mogan-cli paste 127.0.0.1 test-user test-pass`
+12. `./mogan-cli clear-undo-history 127.0.0.1 test-user test-pass`
+
+这条路径让 agent 可以检查状态、移动光标、管理编辑历史、使用剪贴板、
+插入文本，并把结果以脚本化形式读回。
+
+## Targets 和 Scenarios
+
+`mogan-test` 现在支持命名 target 配置。先用
+`./mogan-cli target save <name>` 保存一个配置，再用
+`./mogan-cli target run <name> <command> ...` 运行命令。
+
+对于批量工作流，可以直接执行 `./mogan-cli scenario smoke-edit`。
+
+`./mogan-cli batch smoke -- new-document -- insert-text "hello" -- move-end -- insert-text "!" -- buffer-text`
+是同一思路的低级多步版本。
+
+`./mogan-cli scenario batch-smoke smoke` 是它的命名场景包装器。
+
+`./mogan-cli scenario history-smoke smoke` 用来验证撤销/重做。
+
+`./mogan-cli scenario clipboard-smoke smoke` 用来验证复制/粘贴。

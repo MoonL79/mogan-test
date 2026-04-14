@@ -84,8 +84,8 @@
 (define (mogan-test-create-account server-name pseudo name passwd email)
   (set! *mogan-test-finished?* #f)
   (set! *mogan-test-client* -1)
-  (runtime-log "mogan-runtime: attempting new-account")
-  (start-timeout! "new-account")
+  (runtime-log "mogan-runtime: attempting bootstrap-account")
+  (start-timeout! "bootstrap-account")
   (when (start-client! server-name)
     (enter-secure-mode-if-needed!)
     (remote-call!
