@@ -5,8 +5,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCHEME_SCRIPT="${SCRIPT_DIR}/mogan-cli.scm"
 RUNTIME_SCRIPT="${SCRIPT_DIR}/mogan-runtime.scm"
+SERVER_RUNTIME_SCRIPT="${SCRIPT_DIR}/mogan-server-runtime.scm"
 MOGAN_ROOT="/home/mingshen/git/mogan"
 CONNECT_TRACE="/tmp/mogan-test-connect-trace.log"
+RESULT_FILE="/tmp/mogan-test-runtime-result.txt"
 TEXMACS_PATH_DIR="${MOGAN_ROOT}/TeXmacs"
 DEBUG_BINARY="${MOGAN_ROOT}/build/linux/x86_64/debug/moganstem"
 RELEASE_BINARY="${MOGAN_ROOT}/build/linux/x86_64/release/moganstem"
@@ -33,9 +35,47 @@ resolve_mogan_binary() {
   return 1
 }
 
+print_runtime_result() {
+  if [[ ! -f "$RESULT_FILE" ]]; then
+    echo "status: error"
+    echo "value: missing result file"
+    return 1
+  fi
+
+  local status
+  local value
+  status="$(sed -n '1p' "$RESULT_FILE")"
+  value="$(sed -n '2p' "$RESULT_FILE")"
+
+  echo "status: ${status:-error}"
+  echo "value: ${value:-missing runtime result}"
+
+  [[ "$status" == "ok" ]]
+}
+
+run_runtime_command() {
+  local runtime_expr="$1"
+  local platform="${2:-minimal}"
+  local binary_path
+
+  binary_path="$(resolve_mogan_binary || true)"
+  if [[ -z "$binary_path" ]]; then
+    echo '{"status":"error","message":"Built Mogan client not found. Run `./mogan-cli build-client` first."}' >&2
+    exit 1
+  fi
+
+  : > "$CONNECT_TRACE"
+  : > "$RESULT_FILE"
+
+  cd "$MOGAN_ROOT"
+  env TEXMACS_PATH="$TEXMACS_PATH_DIR" "$binary_path" -platform "$platform" -d -debug-bench -x "$runtime_expr" >/tmp/mogan-test-runtime-output.log 2>&1 || true
+  print_runtime_result
+}
+
 command_name="${1:-}"
 
 default_runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-runtime-status)"
+default_server_runtime_expr="(load \"$SERVER_RUNTIME_SCRIPT\")"
 
 case "$command_name" in
   build-client)
@@ -45,8 +85,66 @@ case "$command_name" in
     ;;
   start-client)
     shift || true
+    if [[ "${1:-}" == "--server" ]] || [[ "${1:-}" == "--dry-run" ]] || [[ "${1:-}" == "--platform" ]]; then
+      binary_path="$(resolve_mogan_binary || true)"
+      if [[ -z "$binary_path" ]]; then
+        echo '{"status":"error","message":"Built Mogan client not found. Run `./mogan-cli build-client` first."}' >&2
+        exit 1
+      fi
+
+      platform=""
+      runtime_expr="$default_server_runtime_expr"
+      with_server="false"
+      dry_run="false"
+
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --server)
+            with_server="true"
+            ;;
+          --platform)
+            platform="${2:-}"
+            shift
+            ;;
+          --without-runtime)
+            runtime_expr=""
+            ;;
+          --dry-run)
+            dry_run="true"
+            ;;
+        esac
+        shift
+      done
+
+      cmd=(env "TEXMACS_PATH=$TEXMACS_PATH_DIR" "$binary_path")
+      if [[ -n "$platform" ]]; then
+        cmd+=(-platform "$platform")
+      fi
+      cmd+=(-d -debug-bench)
+      if [[ "$with_server" == "true" ]]; then
+        cmd+=(-server)
+      fi
+      if [[ -n "$runtime_expr" ]]; then
+        cmd+=(-x "$runtime_expr")
+      fi
+
+      if [[ "$dry_run" == "true" ]]; then
+        printf 'cd %s &&' "$MOGAN_ROOT"
+        printf ' %q' "${cmd[@]}"
+        printf '\n'
+        exit 0
+      fi
+
+      cd "$MOGAN_ROOT"
+      exec "${cmd[@]}"
+    fi
+
     cd "$MOGAN_ROOT"
     exec xmake r stem "$@"
+    ;;
+  start-server)
+    shift || true
+    exec "$0" start-client --server "$@"
     ;;
   exec-internal)
     shift || true
@@ -60,44 +158,83 @@ case "$command_name" in
       runtime_expr="$default_runtime_expr"
     fi
     if [[ "${2:-}" == "--dry-run" ]] || [[ "${1:-}" == "--dry-run" ]]; then
-      printf 'cd %s && TEXMACS_PATH=%q %q -d -debug-bench -x %q\n' "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
+      printf 'cd %s && TEXMACS_PATH=%q %q -platform minimal -d -debug-bench -x %q\n' "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
       exit 0
     fi
-    cd "$MOGAN_ROOT"
-    exec env TEXMACS_PATH="$TEXMACS_PATH_DIR" "$binary_path" -d -debug-bench -x "$runtime_expr"
+    run_runtime_command "$runtime_expr" "minimal"
+    ;;
+  create-account)
+    shift || true
+    if [[ "${1:-}" == "--dry-run" ]]; then
+      set -- "127.0.0.1" "test-user" "Test User" "test-pass" "test@example.com" "--dry-run"
+    fi
+    server_name="${1:-127.0.0.1}"
+    pseudo="${2:-test-user}"
+    name="${3:-Test User}"
+    passwd="${4:-test-pass}"
+    email="${5:-test@example.com}"
+    runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-create-account \"$server_name\" \"$pseudo\" \"$name\" \"$passwd\" \"$email\")"
+    if [[ "${6:-}" == "--dry-run" ]] || [[ "${1:-}" == "--dry-run" ]]; then
+      binary_path="$(resolve_mogan_binary || true)"
+      printf 'cd %s && TEXMACS_PATH=%q %q -platform minimal -d -debug-bench -x %q\n' "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
+      exit 0
+    fi
+    run_runtime_command "$runtime_expr" "minimal"
     ;;
   connect)
     shift || true
-    binary_path="$(resolve_mogan_binary || true)"
-    if [[ -z "$binary_path" ]]; then
-      echo '{"status":"error","message":"Built Mogan client not found. Run `./mogan-cli build-client` first."}' >&2
-      exit 1
+    if [[ "${1:-}" == "--dry-run" ]]; then
+      set -- "127.0.0.1" "test-user" "test-pass" "--dry-run"
     fi
     server_name="${1:-127.0.0.1}"
     pseudo="${2:-test-user}"
     passwd="${3:-test-pass}"
-    runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-remote-login \"$server_name\" \"$pseudo\" \"$passwd\")"
+    runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-connect \"$server_name\" \"$pseudo\" \"$passwd\")"
     if [[ "${4:-}" == "--dry-run" ]] || [[ "${1:-}" == "--dry-run" ]]; then
-      if [[ "${1:-}" == "--dry-run" ]]; then
-        runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-remote-login \"127.0.0.1\" \"test-user\" \"test-pass\")"
-      fi
-      printf 'cd %s && TEXMACS_PATH=%q %q -d -debug-bench -x %q\n' "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
+      binary_path="$(resolve_mogan_binary || true)"
+      printf 'cd %s && TEXMACS_PATH=%q %q -platform minimal -d -debug-bench -x %q\n' "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
       exit 0
     fi
-    : > "$CONNECT_TRACE"
-    cd "$MOGAN_ROOT"
-    exec env TEXMACS_PATH="$TEXMACS_PATH_DIR" "$binary_path" -d -debug-bench -x "$runtime_expr"
+    run_runtime_command "$runtime_expr" "minimal"
+    ;;
+  ping|current-buffer|new-document)
+    shift || true
+    if [[ "${1:-}" == "--dry-run" ]]; then
+      set -- "127.0.0.1" "test-user" "test-pass" "--dry-run"
+    fi
+    server_name="${1:-127.0.0.1}"
+    pseudo="${2:-test-user}"
+    passwd="${3:-test-pass}"
+    remote_command="(mogan-test-ping)"
+    if [[ "$command_name" == "current-buffer" ]]; then
+      remote_command="(mogan-test-current-buffer)"
+    fi
+    if [[ "$command_name" == "new-document" ]]; then
+      remote_command="(mogan-test-new-document)"
+    fi
+    runtime_expr="(load \"$RUNTIME_SCRIPT\") (mogan-test-run-command \"$server_name\" \"$pseudo\" \"$passwd\" '$remote_command)"
+    if [[ "${4:-}" == "--dry-run" ]] || [[ "${1:-}" == "--dry-run" ]]; then
+      binary_path="$(resolve_mogan_binary || true)"
+      printf 'cd %s && TEXMACS_PATH=%q %q -platform minimal -d -debug-bench -x %q\n' "$MOGAN_ROOT" "$TEXMACS_PATH_DIR" "$binary_path" "$runtime_expr"
+      exit 0
+    fi
+    run_runtime_command "$runtime_expr" "minimal"
     ;;
   "")
     cat <<'EOF'
 Usage: mogan-cli <command> [args...]
 Commands:
-  status        - Show current runtime and connection status as JSON
-  workflow      - Show the required Mogan startup workflow
-  build-client  - Build Mogan with `xmake b stem`
-  start-client  - Start a full Mogan client with `xmake r stem`
-  exec-internal - Start Mogan and execute internal Scheme via `-x`
-  connect       - Start Mogan and attempt remote-login inside the runtime
+  status         - Show current runtime and connection status as JSON
+  workflow       - Show the required Mogan startup workflow
+  build-client   - Build Mogan with `xmake b stem`
+  start-client   - Start a full Mogan client with `xmake r stem`
+  start-server   - Start a connectable Mogan client with `moganstem -server`
+  exec-internal  - Start Mogan and execute internal Scheme via `-x`
+  create-account - Create a test account through the remote service layer
+  connect        - Attempt remote-login inside the runtime
+  ping           - Run the server-side `mogan-test-ping` service
+  current-buffer - Query the current buffer from the running Mogan instance
+  new-document   - Create a new document through the running Mogan instance
 EOF
     exit 0
     ;;

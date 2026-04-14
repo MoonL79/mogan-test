@@ -3,7 +3,7 @@
 ; This CLI runs in Goldfish Scheme and provides:
 ;   - structured status about the required Mogan runtime workflow
 ;   - stable command routing for the test platform
-;   - honest reporting for features that are not connected yet
+;   - honest reporting about the live `-server` connection model
 
 (import (liii base)
         (liii json)
@@ -14,6 +14,8 @@
 (define *mogan-root* "/home/mingshen/git/mogan")
 (define *build-command* "xmake b stem")
 (define *run-command* "xmake r stem")
+(define *start-server-command*
+  "TEXMACS_PATH=/home/mingshen/git/mogan/TeXmacs <moganstem> -server -x <runtime>")
 (define *internal-command* "TEXMACS_PATH=/home/mingshen/git/mogan/TeXmacs <moganstem> -d -debug-bench -x <scheme>")
 (define *default-host* "127.0.0.1")
 (define *default-port* 6561)
@@ -28,6 +30,7 @@
   (make-response "error" (cons (cons "message" message) extra)))
 
 (define *connect-trace-path* "/tmp/mogan-test-connect-trace.log")
+(define *server-trace-path* "/tmp/mogan-test-server-trace.log")
 
 (define (candidate-client-paths)
   (list
@@ -62,6 +65,7 @@
     (cons "mogan_root" *mogan-root*)
     (cons "build_command" *build-command*)
     (cons "run_command" *run-command*)
+    (cons "start_server_command" *start-server-command*)
     (cons "internal_command" *internal-command*)
     (cons "client_path" (built-client-path))
     (cons "client_built" (client-built?))
@@ -70,10 +74,14 @@
     (cons "connect_host" *default-host*)
     (cons "connect_port" *default-port*)
     (cons "connect_trace_path" *connect-trace-path*)
-    (cons "next_step" "Use `mogan-cli connect --dry-run` to inspect the direct moganstem remote-login runtime path, then validate it against a running Mogan instance")
-    (cons "connect_status" "runtime-skeleton")
-    (cons "connect_note" "The full client still starts via `xmake r stem`; internal execution bypasses xmake run because the stem target drops extra arguments")
-    (cons "connect_blocker" "A plain `xmake r stem` client did not expose a live TCP listener on port 6561 in this environment, so the runtime-side `client-start` probe currently returns -1")))
+    (cons "server_trace_path" *server-trace-path*)
+    (cons "controller_platform" "minimal")
+    (cons "service_runtime_requirement" "create-account, login, and custom service commands require the target server instance to load mogan-server-runtime.scm")
+    (cons "auth_model" "mogan-test currently uses a test-scoped users.scm account store and server-side login shim inside mogan-server-runtime.scm")
+    (cons "next_step" "Build with `xmake b stem`, start a connectable server with `mogan-cli start-server` or an equivalent `moganstem -server -x '(load .../mogan-server-runtime.scm)'`, then run `create-account`, `connect`, and service commands from mogan-test")
+    (cons "connect_status" "explicit-server-path-ready-for-live-validation")
+    (cons "connect_note" "The real control path is an explicit `moganstem -server` instance; `xmake r stem` remains useful for product startup checks but is not treated as proof of a connectable local server")
+    (cons "connect_blocker" "Cross-process validation still depends on a reachable local `-server` instance and the test runtime loaded from mogan-server-runtime.scm")))
 
 (define (cmd-status args)
   (apply make-success (status-data)))
@@ -81,25 +89,24 @@
 (define (cmd-workflow args)
   (make-success
     (cons "steps"
-          "1. cd /home/mingshen/git/mogan 2. xmake b stem 3. xmake r stem in one client instance 4. Use mogan-cli connect or exec-internal to run direct moganstem `-x` commands in another runtime 5. Validate remote-login")
+          "1. cd /home/mingshen/git/mogan 2. xmake b stem 3. Start a connectable server with `mogan-cli start-server --platform minimal` or an equivalent `moganstem -server -x '(load .../mogan-server-runtime.scm)'` 4. Run `create-account` from mogan-test to bootstrap credentials through the test-scoped users.scm path 5. Run `connect`, `ping`, `current-buffer`, or `new-document` against that live server")
     (cons "constraints"
-          "Do not use headless startup in this stage; do not introduce external TeXmacs tooling; only reuse TeXmacs-related mechanisms already inside mogan")
+          "Do not introduce external TeXmacs tooling; reuse only the TeXmacs-related mechanisms already inside mogan; the controller side may use `-platform minimal` when the current environment cannot open the default Qt display")
     (cons "layers"
-          "gf handles CLI routing and process dispatch; Mogan internal Scheme runs through `-x` and is the only place where runtime glue is available")))
+          "gf handles CLI routing and process dispatch; the server runtime loads test services plus the test-scoped login shim into the target moganstem; the controller runtime logs in and invokes those services through the existing client/server glue")))
 
 (define (cmd-connect args)
-  (make-response
-    "pending"
+  (make-success
     (cons "required_order"
-          "build-client -> start-client -> connect")
+          "build-client -> start-server -> create-account -> connect")
     (cons "host" *default-host*)
     (cons "port" *default-port*)
     (cons "trace_path" *connect-trace-path*)
-    (cons "dispatch_path" "mogan-cli connect -> moganstem -d -debug-bench -x -> load mogan-runtime.scm -> mogan-test-remote-login")
-    (cons "runtime_side" "remote-login is attempted inside Mogan through explicit client-start, enter-secure-mode, and client-remote-eval* steps")
-    (cons "validation_state" "blocked-at-client-start")
-    (cons "current_result" "The runtime trace currently reaches `client-start returned -1`")
-    (cons "next_step" "Start a full client, verify whether it actually exposes port 6561, then continue from the recorded `client-start` blocker in the trace file")))
+    (cons "dispatch_path" "mogan-cli connect -> controller moganstem -platform minimal -x -> load mogan-runtime.scm -> remote-login")
+    (cons "runtime_side" "remote-login and follow-up commands run through explicit client-start, enter-secure-mode, and client-remote-eval")
+    (cons "validation_state" "requires-running-server-instance")
+    (cons "current_result" "The shell wrapper already drives a real controller runtime; login succeeds or fails entirely against the live `-server` instance and supplied credentials")
+    (cons "next_step" "If a connectable server is already running with `mogan-server-runtime.scm` loaded, call `./mogan-cli create-account` once for the target credentials and then run `./mogan-cli connect`; add `ping` or `new-document` after login succeeds")))
 
 (define *commands*
   `(("status" . ,cmd-status)
@@ -113,7 +120,7 @@
         (make-error
           (string-append "Unknown command: " command)
           (cons "available"
-                "status, workflow, connect, build-client, start-client, exec-internal")))))
+                "status, workflow, connect, build-client, start-client, start-server, exec-internal, create-account, ping, current-buffer, new-document")))))
 
 (define (show-usage)
   (display "Usage: mogan-cli <command> [args...]")
@@ -128,9 +135,19 @@
   (newline)
   (display "  start-client  - Start a full Mogan client with `xmake r stem`")
   (newline)
+  (display "  start-server  - Start a connectable Mogan client with `-server` enabled")
+  (newline)
   (display "  exec-internal - Start Mogan and execute internal Scheme through `-x`")
   (newline)
+  (display "  create-account - Create a test account through the remote service path")
+  (newline)
   (display "  connect       - Attempt remote-login through Mogan internal Scheme")
+  (newline)
+  (display "  ping          - Call the server-side ping service")
+  (newline)
+  (display "  current-buffer - Query the current buffer from the running Mogan instance")
+  (newline)
+  (display "  new-document  - Create a new document through the running Mogan instance")
   (newline))
 
 (define (script-arg? arg)
