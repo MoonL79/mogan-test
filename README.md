@@ -1,5 +1,7 @@
 # Mogan Test Platform
 
+中文版本: [README.zh_CN.md](/home/mingshen/git/mogan-test/README.zh_CN.md)
+
 `mogan-test` is a minimal command-line control layer for a live `moganstem -server`
 instance. It uses Goldfish Scheme for the controller/runtime glue and keeps the
 validation path scriptable.
@@ -28,6 +30,7 @@ Run the live validation against that running instance:
 - `./mogan-cli ping`
 - `./mogan-cli current-buffer`
 - `./mogan-cli new-document`
+- `./mogan-cli traces`
 
 Dry-run variants print the exact runtime command instead of executing it.
 
@@ -37,6 +40,9 @@ Dry-run variants print the exact runtime command instead of executing it.
 - `/tmp/mogan-test-server-trace.log`
 - `/tmp/mogan-test-runtime-result.txt`
 - `/tmp/mogan-test-runtime-output.log`
+
+`./mogan-cli traces` prints the current debug bundle from these files. The
+`status` command also reports the same paths.
 
 ## Current Auth Model
 

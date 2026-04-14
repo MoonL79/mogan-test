@@ -8,7 +8,9 @@ RUNTIME_SCRIPT="${SCRIPT_DIR}/mogan-runtime.scm"
 SERVER_RUNTIME_SCRIPT="${SCRIPT_DIR}/mogan-server-runtime.scm"
 MOGAN_ROOT="/home/mingshen/git/mogan"
 CONNECT_TRACE="/tmp/mogan-test-connect-trace.log"
+SERVER_TRACE="/tmp/mogan-test-server-trace.log"
 RESULT_FILE="/tmp/mogan-test-runtime-result.txt"
+RUNTIME_OUTPUT="/tmp/mogan-test-runtime-output.log"
 TEXMACS_PATH_DIR="${MOGAN_ROOT}/TeXmacs"
 DEBUG_BINARY="${MOGAN_ROOT}/build/linux/x86_64/debug/moganstem"
 RELEASE_BINARY="${MOGAN_ROOT}/build/linux/x86_64/release/moganstem"
@@ -53,6 +55,33 @@ print_runtime_result() {
   [[ "$status" == "ok" ]]
 }
 
+show_file_section() {
+  local label="$1"
+  local path="$2"
+  local mode="${3:-tail}"
+
+  echo "== ${label} =="
+  echo "path: ${path}"
+  if [[ -f "$path" ]]; then
+    echo "status: present"
+    if [[ "$mode" == "cat" ]]; then
+      cat "$path"
+    else
+      tail -n 120 "$path"
+    fi
+  else
+    echo "status: missing"
+  fi
+  echo
+}
+
+show_traces() {
+  show_file_section "connect-trace" "$CONNECT_TRACE"
+  show_file_section "server-trace" "$SERVER_TRACE"
+  show_file_section "runtime-result" "$RESULT_FILE" cat
+  show_file_section "runtime-output" "$RUNTIME_OUTPUT"
+}
+
 run_runtime_command() {
   local runtime_expr="$1"
   local platform="${2:-minimal}"
@@ -68,7 +97,7 @@ run_runtime_command() {
   : > "$RESULT_FILE"
 
   cd "$MOGAN_ROOT"
-  env TEXMACS_PATH="$TEXMACS_PATH_DIR" "$binary_path" -platform "$platform" -d -debug-bench -x "$runtime_expr" >/tmp/mogan-test-runtime-output.log 2>&1 || true
+  env TEXMACS_PATH="$TEXMACS_PATH_DIR" "$binary_path" -platform "$platform" -d -debug-bench -x "$runtime_expr" >"$RUNTIME_OUTPUT" 2>&1 || true
   print_runtime_result
 }
 
@@ -220,6 +249,10 @@ case "$command_name" in
     fi
     run_runtime_command "$runtime_expr" "minimal"
     ;;
+  traces)
+    shift || true
+    show_traces
+    ;;
   "")
     cat <<'EOF'
 Usage: mogan-cli <command> [args...]
@@ -235,6 +268,7 @@ Commands:
   ping           - Run the server-side `mogan-test-ping` service
   current-buffer - Query the current buffer from the running Mogan instance
   new-document   - Create a new document through the running Mogan instance
+  traces         - Print the current connect/server trace bundle
 EOF
     exit 0
     ;;

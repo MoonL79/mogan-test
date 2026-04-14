@@ -154,7 +154,17 @@ else
   fail "One or more service dry-runs were incorrect"
 fi
 
-echo "Test 14: Shell wrapper syntax is valid..."
+echo "Test 14: traces command reports the current debug bundle..."
+TRACES_OUTPUT=$($CLI traces 2>&1) || true
+if echo "$TRACES_OUTPUT" | grep -q '/tmp/mogan-test-connect-trace.log' &&
+   echo "$TRACES_OUTPUT" | grep -q '/tmp/mogan-test-server-trace.log' &&
+   echo "$TRACES_OUTPUT" | grep -q '/tmp/mogan-test-runtime-result.txt'; then
+  pass "traces command reports the current debug bundle"
+else
+  fail "traces command did not report the expected debug bundle: $TRACES_OUTPUT"
+fi
+
+echo "Test 15: Shell wrapper syntax is valid..."
 if bash -n "$CLI"; then
   pass "Shell wrapper syntax is valid"
 else
@@ -162,7 +172,7 @@ else
 fi
 
 if [[ $LIVE_MODE -eq 1 ]]; then
-  echo "Test 15: Live create-account reaches the running server..."
+  echo "Test 16: Live create-account reaches the running server..."
   LIVE_CREATE_OUTPUT=$($CLI create-account "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_NAME" "$LIVE_PASS" "$LIVE_EMAIL" 2>&1) || true
   if echo "$LIVE_CREATE_OUTPUT" | grep -q 'status: ok'; then
     pass "Live create-account succeeded against the running server"
@@ -172,7 +182,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
     fail "Live create-account failed: $LIVE_CREATE_OUTPUT"
   fi
 
-  echo "Test 16: Live connect reaches the running server..."
+  echo "Test 17: Live connect reaches the running server..."
   LIVE_CONNECT_OUTPUT=$($CLI connect "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_PASS" 2>&1) || true
   if echo "$LIVE_CONNECT_OUTPUT" | grep -q 'status: ok' &&
      echo "$LIVE_CONNECT_OUTPUT" | grep -q 'value: ready'; then
@@ -182,7 +192,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
   fi
 
   if [[ $EXPECT_SERVICES -eq 1 ]]; then
-    echo "Test 17: Live ping reaches the custom server runtime..."
+    echo "Test 18: Live ping reaches the custom server runtime..."
     LIVE_PING_OUTPUT=$($CLI ping "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_PASS" 2>&1) || true
     if echo "$LIVE_PING_OUTPUT" | grep -q 'status: ok' &&
        echo "$LIVE_PING_OUTPUT" | grep -q 'value: \"pong\"'; then
@@ -205,6 +215,7 @@ if [[ $FAILED -eq 0 ]]; then
   echo "  - Inspect account bootstrap with: ./mogan-cli create-account --dry-run"
   echo "  - Inspect connect/login with: ./mogan-cli connect --dry-run"
   echo "  - Inspect server-side test services with: ./mogan-cli ping --dry-run"
+  echo "  - Inspect trace and runtime files with: ./mogan-cli traces"
   echo "  - Run live validation with: ./validate.sh --live"
   echo "  - Add --expect-services when the target server loaded mogan-server-runtime.scm"
   exit 0

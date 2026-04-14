@@ -8,9 +8,10 @@ command line
     -> Goldfish command router for status/workflow
     -> xmake build entry for moganstem
     -> explicit `moganstem -server` startup path as the connectable runtime
-    -> server-side runtime loaded via `-x` to register test services and test-scoped login
-    -> controller-side runtime loaded via `-x` to create accounts, login, and call services
+  -> server-side runtime loaded via `-x` to register test services and test-scoped login
+  -> controller-side runtime loaded via `-x` to create accounts, login, and call services
     -> trace/result files in /tmp for scripted verification
+    -> `./mogan-cli traces` to print the current debug bundle
 ```
 
 ## Current Slice
@@ -82,7 +83,9 @@ What is real:
 - Account bootstrap and login are currently provided by `mogan-server-runtime.scm` as a test-scoped substitute for the unstable TMDB-backed account path.
 - The running server can expose the custom `ping`, `current-buffer`, and `new-document` test services through `mogan-server-runtime.scm`.
 - The controller runtime writes scriptable status/value results to `/tmp/mogan-test-runtime-result.txt`.
+- The controller runtime writes captured process output to `/tmp/mogan-test-runtime-output.log`.
 - Server-side trace can be inspected in `/tmp/mogan-test-server-trace.log` when debugging live failures.
+- `./mogan-cli traces` prints the current connect trace, server trace, runtime result, and runtime output bundle.
 
 What is still limited:
 

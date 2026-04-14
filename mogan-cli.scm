@@ -31,6 +31,8 @@
 
 (define *connect-trace-path* "/tmp/mogan-test-connect-trace.log")
 (define *server-trace-path* "/tmp/mogan-test-server-trace.log")
+(define *runtime-result-path* "/tmp/mogan-test-runtime-result.txt")
+(define *runtime-output-path* "/tmp/mogan-test-runtime-output.log")
 
 (define (candidate-client-paths)
   (list
@@ -75,6 +77,9 @@
     (cons "connect_port" *default-port*)
     (cons "connect_trace_path" *connect-trace-path*)
     (cons "server_trace_path" *server-trace-path*)
+    (cons "runtime_result_path" *runtime-result-path*)
+    (cons "runtime_output_path" *runtime-output-path*)
+    (cons "traces_command" "./mogan-cli traces")
     (cons "controller_platform" "minimal")
     (cons "service_runtime_requirement" "create-account, login, and custom service commands require the target server instance to load mogan-server-runtime.scm")
     (cons "auth_model" "mogan-test currently uses a test-scoped users.scm account store and server-side login shim inside mogan-server-runtime.scm")
