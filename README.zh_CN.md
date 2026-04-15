@@ -49,6 +49,9 @@
 - `./mogan-cli set-document-language chinese`
 - `./mogan-cli add-style-package number-us`
 - `./mogan-cli remove-style-package number-us`
+- `./mogan-cli set-page-medium papyrus`
+- `./mogan-cli set-page-type letter`
+- `./mogan-cli set-page-orientation landscape`
 - `./mogan-cli revert-buffer`
 - `./mogan-cli close-buffer`
 - `./mogan-cli search-state`
@@ -68,6 +71,7 @@
 - `./mogan-cli scenario file-smoke smoke /tmp/example.tm`
 - `./mogan-cli scenario export-smoke smoke /tmp/example.html`
 - `./mogan-cli scenario style-smoke smoke`
+- `./mogan-cli scenario layout-smoke smoke`
 - `./mogan-cli scenario search-smoke smoke`
 - `./mogan-cli scenario history-smoke smoke`
 - `./mogan-cli scenario clipboard-smoke smoke`
@@ -127,10 +131,13 @@
 28. `./mogan-cli set-document-language chinese`
 29. `./mogan-cli add-style-package number-us`
 30. `./mogan-cli remove-style-package number-us`
+31. `./mogan-cli set-page-medium papyrus`
+32. `./mogan-cli set-page-type letter`
+33. `./mogan-cli set-page-orientation landscape`
 
 这条路径让 agent 可以检查状态、移动光标、管理编辑历史、使用剪贴板、
-管理文件型缓冲区、导出到其他格式、控制文档样式和语言、搜索和替换文本、
-插入文本，并把结果以脚本化形式读回。
+管理文件型缓冲区、导出到其他格式、控制文档样式、语言和页面布局、搜索和
+替换文本、插入文本，并把结果以脚本化形式读回。
 
 ## Targets 和 Scenarios
 
@@ -154,5 +161,7 @@
 `./mogan-cli scenario export-smoke smoke /tmp/example.html` 用来验证导出。
 
 `./mogan-cli scenario style-smoke smoke` 用来验证文档样式和语言控制。
+
+`./mogan-cli scenario layout-smoke smoke` 用来验证页面布局控制。
 
 `./mogan-cli scenario search-smoke smoke` 用来验证搜索导航和替换。

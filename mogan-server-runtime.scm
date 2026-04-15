@@ -463,7 +463,12 @@
             (let ((styles (get-style-list)))
               (if (null? styles) "" (car styles))))
       (cons "style_list" (object->string* (get-style-list)))
-      (cons "document_language" (get-document-language)))))
+      (cons "document_language" (get-document-language))
+      (cons "page_medium" (or (get-init "page-medium") ""))
+      (cons "page_type" (or (get-init "page-type") ""))
+      (cons "page_orientation" (or (get-init "page-orientation") ""))
+      (cons "page_width" (or (get-init "page-width") ""))
+      (cons "page_height" (or (get-init "page-height") "")))))
 
 (define (mogan-test-control-state-string)
   (object->string* (mogan-test-control-state)))
@@ -479,6 +484,13 @@
     (mogan-test-return-control-state envelope)))
 
 (define (mogan-test-run-style-action envelope label action)
+  (mogan-test-server-log
+    (string-append "mogan-server-runtime: " label))
+  (when (mogan-test-require-login envelope)
+    (action)
+    (mogan-test-return-control-state envelope)))
+
+(define (mogan-test-run-layout-action envelope label action)
   (mogan-test-server-log
     (string-append "mogan-server-runtime: " label))
   (when (mogan-test-require-login envelope)
@@ -707,6 +719,36 @@
     envelope
     "remove-style-package"
     (lambda () (remove-style-package pack))))
+
+(tm-service (mogan-test-set-page-medium medium)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: set-page-medium medium="
+      medium))
+  (mogan-test-run-layout-action
+    envelope
+    "set-page-medium"
+    (lambda () (init-page-medium medium))))
+
+(tm-service (mogan-test-set-page-type type)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: set-page-type type="
+      type))
+  (mogan-test-run-layout-action
+    envelope
+    "set-page-type"
+    (lambda () (init-page-type type))))
+
+(tm-service (mogan-test-set-page-orientation orientation)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: set-page-orientation orientation="
+      orientation))
+  (mogan-test-run-layout-action
+    envelope
+    "set-page-orientation"
+    (lambda () (init-page-orientation orientation))))
 
 (tm-service (mogan-test-switch-buffer name)
   (mogan-test-server-log

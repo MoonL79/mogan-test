@@ -221,6 +221,9 @@ COPY_OUTPUT=$($CLI copy --dry-run 2>&1) || true
 CUT_OUTPUT=$($CLI cut --dry-run 2>&1) || true
 PASTE_OUTPUT=$($CLI paste --dry-run 2>&1) || true
 CLEAR_UNDO_HISTORY_OUTPUT=$($CLI clear-undo-history --dry-run 2>&1) || true
+SET_PAGE_MEDIUM_OUTPUT=$($CLI set-page-medium papyrus --dry-run 2>&1) || true
+SET_PAGE_TYPE_OUTPUT=$($CLI set-page-type letter --dry-run 2>&1) || true
+SET_PAGE_ORIENTATION_OUTPUT=$($CLI set-page-orientation landscape --dry-run 2>&1) || true
 if echo "$PING_OUTPUT" | grep -q 'mogan-test-ping' &&
    echo "$CURRENT_BUFFER_OUTPUT" | grep -q 'mogan-test-current-buffer' &&
    echo "$NEW_DOCUMENT_OUTPUT" | grep -q 'mogan-test-new-document' &&
@@ -239,7 +242,10 @@ if echo "$PING_OUTPUT" | grep -q 'mogan-test-ping' &&
     echo "$COPY_OUTPUT" | grep -q 'mogan-test-clipboard-copy' &&
     echo "$CUT_OUTPUT" | grep -q 'mogan-test-clipboard-cut' &&
     echo "$PASTE_OUTPUT" | grep -q 'mogan-test-clipboard-paste' &&
-    echo "$CLEAR_UNDO_HISTORY_OUTPUT" | grep -q 'mogan-test-clear-history'; then
+    echo "$CLEAR_UNDO_HISTORY_OUTPUT" | grep -q 'mogan-test-clear-history' &&
+    echo "$SET_PAGE_MEDIUM_OUTPUT" | grep -q 'mogan-test-set-page-medium' &&
+    echo "$SET_PAGE_TYPE_OUTPUT" | grep -q 'mogan-test-set-page-type' &&
+    echo "$SET_PAGE_ORIENTATION_OUTPUT" | grep -q 'mogan-test-set-page-orientation'; then
   pass "Control dry-runs print the expected controller commands"
 else
   fail "One or more service dry-runs were incorrect"
@@ -278,13 +284,15 @@ else
   fail "Export dry-run workflow failed"
 fi
 
-echo "Test 17b: style dry-runs build the expected style commands..."
+echo "Test 17b: style and layout dry-runs build the expected commands..."
 SET_MAIN_STYLE_OUTPUT=$($CLI set-main-style article --dry-run 2>&1) || true
 SET_DOCUMENT_LANGUAGE_OUTPUT=$($CLI set-document-language chinese --dry-run 2>&1) || true
 ADD_STYLE_PACKAGE_OUTPUT=$($CLI add-style-package number-us --dry-run 2>&1) || true
 REMOVE_STYLE_PACKAGE_OUTPUT=$($CLI remove-style-package number-us --dry-run 2>&1) || true
 SCENARIO_STYLE_DRY_RUN_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
   $CLI scenario style-smoke smoke --dry-run 2>&1) || true
+SCENARIO_LAYOUT_DRY_RUN_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI scenario layout-smoke smoke --dry-run 2>&1) || true
 if echo "$SET_MAIN_STYLE_OUTPUT" | grep -q 'mogan-test-set-main-style' &&
    echo "$SET_DOCUMENT_LANGUAGE_OUTPUT" | grep -q 'mogan-test-set-document-language' &&
    echo "$ADD_STYLE_PACKAGE_OUTPUT" | grep -q 'mogan-test-add-style-package' &&
@@ -292,10 +300,13 @@ if echo "$SET_MAIN_STYLE_OUTPUT" | grep -q 'mogan-test-set-main-style' &&
    echo "$SCENARIO_STYLE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-set-main-style' &&
    echo "$SCENARIO_STYLE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-set-document-language' &&
    echo "$SCENARIO_STYLE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-add-style-package' &&
-   echo "$SCENARIO_STYLE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-remove-style-package'; then
-  pass "Style dry-runs print the expected style commands"
+    echo "$SCENARIO_STYLE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-remove-style-package' &&
+    echo "$SCENARIO_LAYOUT_DRY_RUN_OUTPUT" | grep -q 'mogan-test-set-page-medium' &&
+    echo "$SCENARIO_LAYOUT_DRY_RUN_OUTPUT" | grep -q 'mogan-test-set-page-type' &&
+    echo "$SCENARIO_LAYOUT_DRY_RUN_OUTPUT" | grep -q 'mogan-test-set-page-orientation'; then
+  pass "Style and layout dry-runs print the expected commands"
 else
-  fail "Style dry-run workflow failed"
+  fail "Style or layout dry-run workflow failed"
 fi
 
 echo "Test 17: search dry-runs build the expected search commands..."
@@ -474,6 +485,21 @@ if [[ $LIVE_MODE -eq 1 ]]; then
     else
       fail "Live style scenario failed: $LIVE_STYLE_OUTPUT"
     fi
+
+    echo "Test 28c: Live layout scenario reaches the running server..."
+    LIVE_LAYOUT_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+      $CLI scenario layout-smoke smoke 2>&1) || true
+    if echo "$LIVE_LAYOUT_OUTPUT" | grep -q 'status: ok' &&
+       echo "$LIVE_LAYOUT_OUTPUT" | grep -q 'page_medium' &&
+       echo "$LIVE_LAYOUT_OUTPUT" | grep -q 'page_type' &&
+       echo "$LIVE_LAYOUT_OUTPUT" | grep -q 'page_orientation' &&
+       echo "$LIVE_LAYOUT_OUTPUT" | grep -q 'papyrus' &&
+       echo "$LIVE_LAYOUT_OUTPUT" | grep -q 'letter' &&
+       echo "$LIVE_LAYOUT_OUTPUT" | grep -q 'landscape'; then
+      pass "Live layout scenario succeeded against the custom server runtime"
+    else
+      fail "Live layout scenario failed: $LIVE_LAYOUT_OUTPUT"
+    fi
   fi
 fi
 
@@ -496,6 +522,7 @@ if [[ $FAILED -eq 0 ]]; then
   echo "  - Inspect file lifecycle primitives with: ./mogan-cli open-file /tmp/example.tm --dry-run"
   echo "  - Inspect export primitives with: ./mogan-cli export-buffer /tmp/example.html --dry-run"
   echo "  - Inspect style primitives with: ./mogan-cli set-main-style article --dry-run"
+  echo "  - Inspect layout primitives with: ./mogan-cli set-page-medium papyrus --dry-run"
   echo "  - Inspect search primitives with: ./mogan-cli search-set alpha --dry-run"
   echo "  - Save a target profile with: ./mogan-cli target save smoke"
   echo "  - Inspect batch workflows with: ./mogan-cli batch smoke -- new-document -- buffer-text"
@@ -504,6 +531,7 @@ if [[ $FAILED -eq 0 ]]; then
   echo "  - Run the file scenario with: ./mogan-cli scenario file-smoke smoke /tmp/example.tm"
   echo "  - Run the export scenario with: ./mogan-cli scenario export-smoke smoke /tmp/example.html"
   echo "  - Run the style scenario with: ./mogan-cli scenario style-smoke smoke"
+  echo "  - Run the layout scenario with: ./mogan-cli scenario layout-smoke smoke"
   echo "  - Run the search scenario with: ./mogan-cli scenario search-smoke smoke"
   echo "  - Run the history scenario with: ./mogan-cli scenario history-smoke smoke"
   echo "  - Run the clipboard scenario with: ./mogan-cli scenario clipboard-smoke smoke"

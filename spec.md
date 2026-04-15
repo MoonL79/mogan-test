@@ -148,6 +148,7 @@ Mogan 命令行控制与测试平台
 - `set-main-style`
 - `set-document-language`
 - `add-style-package` / `remove-style-package`
+- `set-page-medium` / `set-page-type` / `set-page-orientation`
 - `buffer-list`
 - `open-file`
 - `save-as`
@@ -179,6 +180,7 @@ Mogan 命令行控制与测试平台
 - `scenario file-smoke`
 - `scenario export-smoke`
 - `scenario style-smoke`
+- `scenario layout-smoke`
 - `scenario search-smoke`
 - `scenario history-smoke`
 - `scenario clipboard-smoke`
@@ -214,6 +216,7 @@ Mogan 命令行控制与测试平台
 - 至少存在一个可复用的 target profile 和一个可运行的 scenario workflow
 - 至少存在一个可脚本化的 export workflow
 - 至少存在一个可脚本化的 style/language workflow
+- 至少存在一个可脚本化的 page layout workflow
 - 至少存在一个可脚本化的 batch workflow
 - 结果可被脚本化验证，而不是只靠人工观察
 - 文档能说明平台目标、当前边界、真实接入点和仍然是 stub 的部分

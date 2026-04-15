@@ -52,6 +52,9 @@ Run the live validation against that running instance:
 - `./mogan-cli set-document-language chinese`
 - `./mogan-cli add-style-package number-us`
 - `./mogan-cli remove-style-package number-us`
+- `./mogan-cli set-page-medium papyrus`
+- `./mogan-cli set-page-type letter`
+- `./mogan-cli set-page-orientation landscape`
 - `./mogan-cli revert-buffer`
 - `./mogan-cli close-buffer`
 - `./mogan-cli search-state`
@@ -71,6 +74,7 @@ Run the live validation against that running instance:
 - `./mogan-cli scenario file-smoke smoke /tmp/example.tm`
 - `./mogan-cli scenario export-smoke smoke /tmp/example.html`
 - `./mogan-cli scenario style-smoke smoke`
+- `./mogan-cli scenario layout-smoke smoke`
 - `./mogan-cli scenario search-smoke smoke`
 - `./mogan-cli scenario history-smoke smoke`
 - `./mogan-cli scenario clipboard-smoke smoke`
@@ -129,11 +133,14 @@ small set of low-level editing, history, clipboard, and file lifecycle primitive
 28. `./mogan-cli set-document-language chinese`
 29. `./mogan-cli add-style-package number-us`
 30. `./mogan-cli remove-style-package number-us`
+31. `./mogan-cli set-page-medium papyrus`
+32. `./mogan-cli set-page-type letter`
+33. `./mogan-cli set-page-orientation landscape`
 
 This path lets agents inspect state, move the cursor, manage edit history, use
 the clipboard, manage file-backed buffers, export to another format, control
-document style and language, search and replace text, insert text, and read the
-result back as a scriptable response.
+document style, language, and page layout, search and replace text, insert text,
+and read the result back as a scriptable response.
 
 ## Targets and Scenarios
 
@@ -159,5 +166,7 @@ batch flow.
 `./mogan-cli scenario export-smoke smoke /tmp/example.html` exercises export.
 
 `./mogan-cli scenario style-smoke smoke` exercises document style and language control.
+
+`./mogan-cli scenario layout-smoke smoke` exercises page layout control.
 
 `./mogan-cli scenario search-smoke smoke` exercises search navigation and replace.
