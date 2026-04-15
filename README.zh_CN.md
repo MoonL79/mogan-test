@@ -45,6 +45,10 @@
 - `./mogan-cli open-file /tmp/example.tm`
 - `./mogan-cli save-as /tmp/example.tm`
 - `./mogan-cli export-buffer /tmp/example.html`
+- `./mogan-cli set-main-style article`
+- `./mogan-cli set-document-language chinese`
+- `./mogan-cli add-style-package number-us`
+- `./mogan-cli remove-style-package number-us`
 - `./mogan-cli revert-buffer`
 - `./mogan-cli close-buffer`
 - `./mogan-cli search-state`
@@ -63,6 +67,7 @@
 - `./mogan-cli scenario batch-smoke smoke`
 - `./mogan-cli scenario file-smoke smoke /tmp/example.tm`
 - `./mogan-cli scenario export-smoke smoke /tmp/example.html`
+- `./mogan-cli scenario style-smoke smoke`
 - `./mogan-cli scenario search-smoke smoke`
 - `./mogan-cli scenario history-smoke smoke`
 - `./mogan-cli scenario clipboard-smoke smoke`
@@ -118,10 +123,14 @@
 24. `./mogan-cli replace-set gamma`
 25. `./mogan-cli replace-one`
 26. `./mogan-cli replace-all`
+27. `./mogan-cli set-main-style article`
+28. `./mogan-cli set-document-language chinese`
+29. `./mogan-cli add-style-package number-us`
+30. `./mogan-cli remove-style-package number-us`
 
 这条路径让 agent 可以检查状态、移动光标、管理编辑历史、使用剪贴板、
-管理文件型缓冲区、导出到其他格式、搜索和替换文本、插入文本，并把结果
-以脚本化形式读回。
+管理文件型缓冲区、导出到其他格式、控制文档样式和语言、搜索和替换文本、
+插入文本，并把结果以脚本化形式读回。
 
 ## Targets 和 Scenarios
 
@@ -143,5 +152,7 @@
 `./mogan-cli scenario file-smoke smoke /tmp/example.tm` 用来验证打开、另存、回退和关闭。
 
 `./mogan-cli scenario export-smoke smoke /tmp/example.html` 用来验证导出。
+
+`./mogan-cli scenario style-smoke smoke` 用来验证文档样式和语言控制。
 
 `./mogan-cli scenario search-smoke smoke` 用来验证搜索导航和替换。

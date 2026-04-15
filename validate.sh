@@ -278,6 +278,26 @@ else
   fail "Export dry-run workflow failed"
 fi
 
+echo "Test 17b: style dry-runs build the expected style commands..."
+SET_MAIN_STYLE_OUTPUT=$($CLI set-main-style article --dry-run 2>&1) || true
+SET_DOCUMENT_LANGUAGE_OUTPUT=$($CLI set-document-language chinese --dry-run 2>&1) || true
+ADD_STYLE_PACKAGE_OUTPUT=$($CLI add-style-package number-us --dry-run 2>&1) || true
+REMOVE_STYLE_PACKAGE_OUTPUT=$($CLI remove-style-package number-us --dry-run 2>&1) || true
+SCENARIO_STYLE_DRY_RUN_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI scenario style-smoke smoke --dry-run 2>&1) || true
+if echo "$SET_MAIN_STYLE_OUTPUT" | grep -q 'mogan-test-set-main-style' &&
+   echo "$SET_DOCUMENT_LANGUAGE_OUTPUT" | grep -q 'mogan-test-set-document-language' &&
+   echo "$ADD_STYLE_PACKAGE_OUTPUT" | grep -q 'mogan-test-add-style-package' &&
+   echo "$REMOVE_STYLE_PACKAGE_OUTPUT" | grep -q 'mogan-test-remove-style-package' &&
+   echo "$SCENARIO_STYLE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-set-main-style' &&
+   echo "$SCENARIO_STYLE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-set-document-language' &&
+   echo "$SCENARIO_STYLE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-add-style-package' &&
+   echo "$SCENARIO_STYLE_DRY_RUN_OUTPUT" | grep -q 'mogan-test-remove-style-package'; then
+  pass "Style dry-runs print the expected style commands"
+else
+  fail "Style dry-run workflow failed"
+fi
+
 echo "Test 17: search dry-runs build the expected search commands..."
 SEARCH_SET_OUTPUT=$($CLI search-set alpha --dry-run 2>&1) || true
 SEARCH_STATE_OUTPUT=$($CLI search-state --dry-run 2>&1) || true
@@ -440,6 +460,20 @@ if [[ $LIVE_MODE -eq 1 ]]; then
     else
       fail "Live export scenario failed: $LIVE_EXPORT_OUTPUT"
     fi
+
+    echo "Test 28b: Live style scenario reaches the running server..."
+    LIVE_STYLE_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+      $CLI scenario style-smoke smoke 2>&1) || true
+    if echo "$LIVE_STYLE_OUTPUT" | grep -q 'status: ok' &&
+       echo "$LIVE_STYLE_OUTPUT" | grep -q 'main_style' &&
+       echo "$LIVE_STYLE_OUTPUT" | grep -q 'style_list' &&
+       echo "$LIVE_STYLE_OUTPUT" | grep -q 'document_language' &&
+       echo "$LIVE_STYLE_OUTPUT" | grep -q 'article' &&
+       echo "$LIVE_STYLE_OUTPUT" | grep -q 'chinese'; then
+      pass "Live style scenario succeeded against the custom server runtime"
+    else
+      fail "Live style scenario failed: $LIVE_STYLE_OUTPUT"
+    fi
   fi
 fi
 
@@ -461,6 +495,7 @@ if [[ $FAILED -eq 0 ]]; then
   echo "  - Inspect clipboard primitives with: ./mogan-cli copy --dry-run"
   echo "  - Inspect file lifecycle primitives with: ./mogan-cli open-file /tmp/example.tm --dry-run"
   echo "  - Inspect export primitives with: ./mogan-cli export-buffer /tmp/example.html --dry-run"
+  echo "  - Inspect style primitives with: ./mogan-cli set-main-style article --dry-run"
   echo "  - Inspect search primitives with: ./mogan-cli search-set alpha --dry-run"
   echo "  - Save a target profile with: ./mogan-cli target save smoke"
   echo "  - Inspect batch workflows with: ./mogan-cli batch smoke -- new-document -- buffer-text"
@@ -468,6 +503,7 @@ if [[ $FAILED -eq 0 ]]; then
   echo "  - Run the batch scenario with: ./mogan-cli scenario batch-smoke smoke"
   echo "  - Run the file scenario with: ./mogan-cli scenario file-smoke smoke /tmp/example.tm"
   echo "  - Run the export scenario with: ./mogan-cli scenario export-smoke smoke /tmp/example.html"
+  echo "  - Run the style scenario with: ./mogan-cli scenario style-smoke smoke"
   echo "  - Run the search scenario with: ./mogan-cli scenario search-smoke smoke"
   echo "  - Run the history scenario with: ./mogan-cli scenario history-smoke smoke"
   echo "  - Run the clipboard scenario with: ./mogan-cli scenario clipboard-smoke smoke"

@@ -458,7 +458,12 @@
                 ""))
       (cons "undo_possibilities" (undo-possibilities))
       (cons "redo_possibilities" (redo-possibilities))
-      (cons "buffer_text" (mogan-test-buffer-text-value)))))
+      (cons "buffer_text" (mogan-test-buffer-text-value))
+      (cons "main_style"
+            (let ((styles (get-style-list)))
+              (if (null? styles) "" (car styles))))
+      (cons "style_list" (object->string* (get-style-list)))
+      (cons "document_language" (get-document-language)))))
 
 (define (mogan-test-control-state-string)
   (object->string* (mogan-test-control-state)))
@@ -467,6 +472,13 @@
   (server-return envelope (mogan-test-control-state-string)))
 
 (define (mogan-test-run-control-action envelope label action)
+  (mogan-test-server-log
+    (string-append "mogan-server-runtime: " label))
+  (when (mogan-test-require-login envelope)
+    (action)
+    (mogan-test-return-control-state envelope)))
+
+(define (mogan-test-run-style-action envelope label action)
   (mogan-test-server-log
     (string-append "mogan-server-runtime: " label))
   (when (mogan-test-require-login envelope)
@@ -655,6 +667,46 @@
     envelope
     "save-buffer"
     (lambda () (save-buffer))))
+
+(tm-service (mogan-test-set-main-style style)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: set-main-style style="
+      style))
+  (mogan-test-run-style-action
+    envelope
+    "set-main-style"
+    (lambda () (set-main-style style))))
+
+(tm-service (mogan-test-set-document-language language)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: set-document-language language="
+      language))
+  (mogan-test-run-style-action
+    envelope
+    "set-document-language"
+    (lambda () (set-document-language language))))
+
+(tm-service (mogan-test-add-style-package pack)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: add-style-package pack="
+      pack))
+  (mogan-test-run-style-action
+    envelope
+    "add-style-package"
+    (lambda () (add-style-package pack))))
+
+(tm-service (mogan-test-remove-style-package pack)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: remove-style-package pack="
+      pack))
+  (mogan-test-run-style-action
+    envelope
+    "remove-style-package"
+    (lambda () (remove-style-package pack))))
 
 (tm-service (mogan-test-switch-buffer name)
   (mogan-test-server-log

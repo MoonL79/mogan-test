@@ -145,6 +145,9 @@ Mogan 命令行控制与测试平台
 - `delete-left` / `delete-right`
 - `save-buffer`
 - `export-buffer`
+- `set-main-style`
+- `set-document-language`
+- `add-style-package` / `remove-style-package`
 - `buffer-list`
 - `open-file`
 - `save-as`
@@ -175,6 +178,7 @@ Mogan 命令行控制与测试平台
 - `scenario batch-smoke`
 - `scenario file-smoke`
 - `scenario export-smoke`
+- `scenario style-smoke`
 - `scenario search-smoke`
 - `scenario history-smoke`
 - `scenario clipboard-smoke`
@@ -209,6 +213,7 @@ Mogan 命令行控制与测试平台
 - 至少存在一条低级控制链路，例如 `state -> move-* -> insert-text -> buffer-text`
 - 至少存在一个可复用的 target profile 和一个可运行的 scenario workflow
 - 至少存在一个可脚本化的 export workflow
+- 至少存在一个可脚本化的 style/language workflow
 - 至少存在一个可脚本化的 batch workflow
 - 结果可被脚本化验证，而不是只靠人工观察
 - 文档能说明平台目标、当前边界、真实接入点和仍然是 stub 的部分

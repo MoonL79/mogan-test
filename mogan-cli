@@ -491,6 +491,7 @@ smoke-edit
 batch-smoke
 file-smoke
 export-smoke
+style-smoke
 search-smoke
 history-smoke
 clipboard-smoke
@@ -583,6 +584,28 @@ EOF
         batch_args+=(-- new-document -- write-text "export smoke" -- export-buffer "$export_path")
         exec "$0" "${batch_args[@]}"
         ;;
+      style-smoke)
+        shift || true
+        target_name="smoke"
+        dry_run_flag=""
+        if [[ $# -gt 0 ]]; then
+          if [[ "${1:-}" == "--dry-run" ]]; then
+            dry_run_flag="--dry-run"
+          else
+            target_name="$1"
+            shift || true
+            if [[ "${1:-}" == "--dry-run" ]]; then
+              dry_run_flag="--dry-run"
+            fi
+          fi
+        fi
+        batch_args=(batch "$target_name")
+        if [[ -n "$dry_run_flag" ]]; then
+          batch_args+=("$dry_run_flag")
+        fi
+        batch_args+=(-- new-document -- set-main-style article -- set-document-language chinese -- add-style-package number-us -- remove-style-package number-us -- state)
+        exec "$0" "${batch_args[@]}"
+        ;;
       search-smoke)
         shift || true
         target_name="smoke"
@@ -651,7 +674,7 @@ EOF
         ;;
       "")
         cat <<'EOF'
-Usage: mogan-cli scenario <list|smoke-edit|batch-smoke|file-smoke|export-smoke|history-smoke|clipboard-smoke> [args...]
+Usage: mogan-cli scenario <list|smoke-edit|batch-smoke|file-smoke|export-smoke|style-smoke|search-smoke|history-smoke|clipboard-smoke> [args...]
 EOF
         exit 1
         ;;
@@ -808,6 +831,52 @@ EOF
         ;;
     esac
     run_remote_runtime_command "$remote_command" "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_PASS" "$dry_run_flag"
+    ;;
+  set-main-style|set-document-language|add-style-package|remove-style-package)
+    shift || true
+    dry_run_flag=""
+    if [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]] || [[ "${2:-}" == "--dry-run" ]] || [[ "${5:-}" == "--dry-run" ]]; then
+      dry_run_flag="--dry-run"
+    fi
+    if [[ $# -eq 1 ]]; then
+      server_name="$DEFAULT_HOST"
+      pseudo="$DEFAULT_PSEUDO"
+      passwd="$DEFAULT_PASS"
+      value="${1:-}"
+    elif [[ $# -eq 2 ]] && [[ "${2:-}" == "--dry-run" ]]; then
+      server_name="$DEFAULT_HOST"
+      pseudo="$DEFAULT_PSEUDO"
+      passwd="$DEFAULT_PASS"
+      value="${1:-}"
+    else
+      if [[ $# -lt 4 ]]; then
+        echo '{"status":"error","message":"Style value is required"}' >&2
+        exit 1
+      fi
+      server_name="${1:-$DEFAULT_HOST}"
+      pseudo="${2:-$DEFAULT_PSEUDO}"
+      passwd="${3:-$DEFAULT_PASS}"
+      value="${4:-}"
+    fi
+    if [[ "$value" == "--dry-run" ]]; then
+      echo '{"status":"error","message":"Style value is required"}' >&2
+      exit 1
+    fi
+    case "$command_name" in
+      set-main-style)
+        remote_command="(mogan-test-set-main-style \"$(scheme_escape "$value")\")"
+        ;;
+      set-document-language)
+        remote_command="(mogan-test-set-document-language \"$(scheme_escape "$value")\")"
+        ;;
+      add-style-package)
+        remote_command="(mogan-test-add-style-package \"$(scheme_escape "$value")\")"
+        ;;
+      remove-style-package)
+        remote_command="(mogan-test-remove-style-package \"$(scheme_escape "$value")\")"
+        ;;
+    esac
+    run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
     ;;
   search-set|replace-set)
     shift || true
