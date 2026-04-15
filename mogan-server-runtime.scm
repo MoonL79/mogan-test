@@ -1,6 +1,9 @@
 ;; mogan-server-runtime.scm - Server-side test services loaded via `-x`
 
-(use-modules (server server-base))
+(use-modules (server server-base)
+             (generic search-widgets))
+
+(load "/home/mingshen/git/mogan/TeXmacs/progs/generic/search-widgets.scm")
 
 (define *mogan-test-server-trace-path* "/tmp/mogan-test-server-trace.log")
 (define *mogan-test-login-table* (make-ahash-table))
@@ -159,18 +162,23 @@
 (define (mogan-test-buffer-body)
   (buffer-get-body (current-buffer)))
 
+(define (mogan-test-tree-text-value body)
+  (cond
+    ((and body
+          (tree-is? body 'document 1)
+          (> (tree-arity body) 0)
+          (tree-atomic? (tree-ref body 0)))
+     (tree->string (tree-ref body 0)))
+    (body
+     (object->string* (tm->stree body)))
+    (else
+     "")))
+
+(define (mogan-test-buffer-text-value-from buffer)
+  (mogan-test-tree-text-value (buffer-get-body buffer)))
+
 (define (mogan-test-buffer-text-value)
-  (let ((body (mogan-test-buffer-body)))
-    (cond
-      ((and body
-            (tree-is? body 'document)
-            (> (tree-arity body) 0)
-            (tree-atomic? (tree-ref body 0)))
-       (tree->string (tree-ref body 0)))
-      (body
-       (object->string* (tm->stree body)))
-      (else
-       ""))))
+  (mogan-test-buffer-text-value-from (current-buffer)))
 
 (define (mogan-test-buffer-record buffer)
   (list
@@ -239,6 +247,159 @@
             (buffer-close buf)
             (server-return envelope (mogan-test-buffer-list-value)))
           (server-error envelope "no current buffer")))))
+
+(define (mogan-test-search-buffer-url)
+  (search-buffer))
+
+(define (mogan-test-replace-buffer-url)
+  (replace-buffer))
+
+(define (mogan-test-aux-buffer-text buffer-url)
+  (if (buffer-exists? buffer-url)
+      (mogan-test-buffer-text-value-from buffer-url)
+      ""))
+
+(define (mogan-test-search-state-value)
+  (append
+    (mogan-test-control-state)
+    (list
+      (cons "search_buffer"
+            (if (buffer-exists? (mogan-test-search-buffer-url))
+                (url->string (mogan-test-search-buffer-url))
+                ""))
+      (cons "search_buffer_exists"
+            (buffer-exists? (mogan-test-search-buffer-url)))
+      (cons "search_query"
+            (mogan-test-aux-buffer-text (mogan-test-search-buffer-url)))
+      (cons "replace_buffer"
+            (if (buffer-exists? (mogan-test-replace-buffer-url))
+                (url->string (mogan-test-replace-buffer-url))
+                ""))
+      (cons "replace_buffer_exists"
+            (buffer-exists? (mogan-test-replace-buffer-url)))
+      (cons "replace_text"
+            (mogan-test-aux-buffer-text (mogan-test-replace-buffer-url))))))
+
+(define (mogan-test-search-state-string)
+  (object->string* (mogan-test-search-state-value)))
+
+(define (mogan-test-search-buffer-ready? envelope)
+  (if (buffer-exists? (mogan-test-search-buffer-url))
+      #t
+      (begin
+        (server-error envelope "search query not set")
+        #f)))
+
+(define (mogan-test-replace-buffer-ready? envelope)
+  (if (buffer-exists? (mogan-test-replace-buffer-url))
+      #t
+      (begin
+        (server-error envelope "replace text not set")
+        #f)))
+
+(define (mogan-test-setup-replace-buffer! replacement)
+  (let ((u (current-buffer))
+        (aux (mogan-test-replace-buffer-url)))
+    (buffer-set-body aux `(document ,replacement))
+    (buffer-set-master aux u)))
+
+(define (mogan-test-search-set! query)
+  (search-toolbar-keypress query #f))
+
+(define (mogan-test-run-search-set envelope label query)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: "
+      label
+      " query="
+      query))
+  (when (mogan-test-require-login envelope)
+    (mogan-test-search-set! query)
+    (server-return envelope (mogan-test-search-state-string))))
+
+(define (mogan-test-run-search-navigation envelope label action)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: "
+      label))
+  (when (mogan-test-require-login envelope)
+    (if (not (mogan-test-search-buffer-ready? envelope))
+        #f
+        (let ((ok? (action)))
+          (if ok?
+              (server-return envelope (mogan-test-search-state-string))
+              (server-error envelope "search match not found"))))))
+
+(define (mogan-test-run-replace-set envelope label replacement)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: "
+      label
+      " replacement="
+      replacement))
+  (when (mogan-test-require-login envelope)
+    (mogan-test-setup-replace-buffer! replacement)
+    (server-return envelope (mogan-test-search-state-string))))
+
+(define (mogan-test-run-replace-action envelope label action)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: "
+      label))
+  (when (mogan-test-require-login envelope)
+    (if (or (not (mogan-test-search-buffer-ready? envelope))
+            (not (mogan-test-replace-buffer-ready? envelope)))
+        #f
+        (begin
+          (action)
+          (server-return envelope (mogan-test-search-state-string))))))
+
+(tm-service (mogan-test-search-state)
+  (mogan-test-server-log "mogan-server-runtime: search-state")
+  (when (mogan-test-require-login envelope)
+    (server-return envelope (mogan-test-search-state-string))))
+
+(tm-service (mogan-test-search-set query)
+  (mogan-test-run-search-set envelope "search-set" query))
+
+(tm-service (mogan-test-search-next)
+  (mogan-test-run-search-navigation
+    envelope
+    "search-next"
+    (lambda () (search-next-match #t))))
+
+(tm-service (mogan-test-search-prev)
+  (mogan-test-run-search-navigation
+    envelope
+    "search-prev"
+    (lambda () (search-next-match #f))))
+
+(tm-service (mogan-test-search-first)
+  (mogan-test-run-search-navigation
+    envelope
+    "search-first"
+    (lambda () (search-extreme-match #f))))
+
+(tm-service (mogan-test-search-last)
+  (mogan-test-run-search-navigation
+    envelope
+    "search-last"
+    (lambda () (search-extreme-match #t))))
+
+(tm-service (mogan-test-replace-set replacement)
+  (mogan-test-run-replace-set envelope "replace-set" replacement))
+
+(tm-service (mogan-test-replace-one)
+  (mogan-test-run-replace-action
+    envelope
+    "replace-one"
+    (lambda () (replace-one))))
+
+(tm-service (mogan-test-replace-all)
+  (mogan-test-run-replace-action
+    envelope
+    "replace-all"
+    (lambda () (replace-all))))
 
 (define (mogan-test-current-buffer-string)
   (let ((buffer-name (current-buffer)))

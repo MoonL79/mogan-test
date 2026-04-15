@@ -99,6 +99,18 @@ The current account flow is intentionally test-scoped:
   Reverts the current buffer from disk after login.
 - `close-buffer`
   Closes the current buffer immediately after login.
+- `search-state`
+  Returns JSON describing the current search and replace buffers plus the active document state.
+- `search-set`
+  Sets the current search query and performs the initial search.
+- `search-next` / `search-prev`
+  Moves to the next or previous search match after login.
+- `search-first` / `search-last`
+  Jumps to the first or last search match after login.
+- `replace-set`
+  Sets the current replacement text.
+- `replace-one` / `replace-all`
+  Replaces the current match once or all remaining matches after login.
 - `switch-buffer`
   Switches to another buffer after login.
 - `batch`
@@ -109,6 +121,8 @@ The current account flow is intentionally test-scoped:
   Runs the low-level batch smoke workflow against a target profile.
 - `scenario file-smoke`
   Runs the file lifecycle smoke workflow against a target profile.
+- `scenario search-smoke`
+  Runs the search/replace smoke workflow against a target profile.
 - `target save` / `target run`
   Saves a named target profile and reuses it to run commands without repeating connection details.
 
@@ -128,11 +142,11 @@ What is real:
 - The test platform now distinguishes between the explicit connectable server path and the separate full-client startup path.
 - The connectable path reuses the real `client-start` and `client-remote-eval` glue already present in `mogan`.
 - Account bootstrap and login are currently provided by `mogan-server-runtime.scm` as a test-scoped substitute for the unstable TMDB-backed account path.
-- The running server can expose the custom `ping`, `current-buffer`, `new-document`, `state`, and low-level editing services through `mogan-server-runtime.scm`.
+- The running server can expose the custom `ping`, `current-buffer`, `new-document`, `state`, search/replace, and low-level editing services through `mogan-server-runtime.scm`.
 - The running server can expose a minimal text-edit round trip through `write-text` and `buffer-text`.
 - Named target profiles can be saved under `MOGAN_TEST_TARGET_DIR` and replayed through `mogan-cli target run`.
 - `mogan-cli batch` can chain low-level steps against one target profile.
-- `mogan-cli scenario smoke-edit`, `mogan-cli scenario batch-smoke`, `mogan-cli scenario file-smoke`, `mogan-cli scenario history-smoke`, and `mogan-cli scenario clipboard-smoke` provide named workflows.
+- `mogan-cli scenario smoke-edit`, `mogan-cli scenario batch-smoke`, `mogan-cli scenario file-smoke`, `mogan-cli scenario search-smoke`, `mogan-cli scenario history-smoke`, and `mogan-cli scenario clipboard-smoke` provide named workflows.
 - The controller runtime writes scriptable status/value results to `/tmp/mogan-test-runtime-result.txt`.
 - The controller runtime writes captured process output to `/tmp/mogan-test-runtime-output.log`.
 - Server-side trace can be inspected in `/tmp/mogan-test-server-trace.log` when debugging live failures.
@@ -141,8 +155,8 @@ What is real:
 What is still limited:
 
 - End-to-end success still depends on a live Mogan runtime that can stay up with `-server` enabled in the current environment.
-- The current custom service surface is intentionally small, but now includes `ping`, `current-buffer`, `new-document`, `state`, `move-*`, `select-*`, `undo`, `redo`, `copy`, `cut`, `paste`, `clear-undo-history`, `insert-text`, `delete-*`, `save-buffer`, `buffer-list`, `open-file`, `save-as`, `revert-buffer`, `close-buffer`, `switch-buffer`, `write-text`, and `buffer-text`.
-- The current platform also has named target profiles, a batch runner, and minimal scenario runners for edit, file lifecycle, history, and clipboard workflows.
+- The current custom service surface is intentionally small, but now includes `ping`, `current-buffer`, `new-document`, `state`, `move-*`, `select-*`, `undo`, `redo`, `copy`, `cut`, `paste`, `clear-undo-history`, `insert-text`, `delete-*`, `save-buffer`, `buffer-list`, `open-file`, `save-as`, `revert-buffer`, `close-buffer`, `search-state`, `search-set`, `search-next`, `search-prev`, `search-first`, `search-last`, `replace-set`, `replace-one`, `replace-all`, `switch-buffer`, `write-text`, and `buffer-text`.
+- The current platform also has named target profiles, a batch runner, and minimal scenario runners for edit, file lifecycle, search/replace, history, and clipboard workflows.
 - The current account/login behavior is test-scoped and should not be mistaken for the final product-side user system.
 - Those custom services and the test-scoped login shim are unavailable when the target `-server` instance was started without loading `mogan-server-runtime.scm`.
 - The default validation script checks command construction and local skeleton consistency; live validation is opt-in and should be pointed at an already-running server.
@@ -153,6 +167,7 @@ Run `./validate.sh --live` against an already-running `moganstem -server` instan
 confirm `create-account` and `connect`,
 then validate `mogan-cli target run smoke scenario smoke-edit`,
 `mogan-cli scenario file-smoke smoke`,
+`mogan-cli scenario search-smoke smoke`,
 `mogan-cli scenario history-smoke smoke`,
 `mogan-cli scenario clipboard-smoke smoke`,
 or `mogan-cli scenario batch-smoke smoke` when that target server was started with

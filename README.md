@@ -13,7 +13,7 @@ Build and start a connectable server:
 
 ```bash
 ./mogan-cli build-client
-./mogan-cli start-server --platform minimal
+./mogan-cli start-server
 ```
 
 Run the live validation against that running instance:
@@ -49,12 +49,22 @@ Run the live validation against that running instance:
 - `./mogan-cli save-as /tmp/example.tm`
 - `./mogan-cli revert-buffer`
 - `./mogan-cli close-buffer`
+- `./mogan-cli search-state`
+- `./mogan-cli search-set alpha`
+- `./mogan-cli search-next`
+- `./mogan-cli search-prev`
+- `./mogan-cli search-first`
+- `./mogan-cli search-last`
+- `./mogan-cli replace-set gamma`
+- `./mogan-cli replace-one`
+- `./mogan-cli replace-all`
 - `./mogan-cli batch smoke -- new-document -- insert-text "hello" -- move-end -- insert-text "!" -- buffer-text`
 - `./mogan-cli target save smoke`
 - `./mogan-cli target run smoke state`
 - `./mogan-cli scenario smoke-edit`
 - `./mogan-cli scenario batch-smoke smoke`
 - `./mogan-cli scenario file-smoke smoke /tmp/example.tm`
+- `./mogan-cli scenario search-smoke smoke`
 - `./mogan-cli scenario history-smoke smoke`
 - `./mogan-cli scenario clipboard-smoke smoke`
 - `./mogan-cli traces`
@@ -99,10 +109,19 @@ small set of low-level editing, history, clipboard, and file lifecycle primitive
 15. `./mogan-cli save-as /tmp/example.tm`
 16. `./mogan-cli revert-buffer`
 17. `./mogan-cli close-buffer`
+18. `./mogan-cli search-state`
+19. `./mogan-cli search-set alpha`
+20. `./mogan-cli search-next`
+21. `./mogan-cli search-prev`
+22. `./mogan-cli search-first`
+23. `./mogan-cli search-last`
+24. `./mogan-cli replace-set gamma`
+25. `./mogan-cli replace-one`
+26. `./mogan-cli replace-all`
 
 This path lets agents inspect state, move the cursor, manage edit history, use
-the clipboard, manage file-backed buffers, insert text, and read the result back
-as a scriptable response.
+the clipboard, manage file-backed buffers, search and replace text, insert text,
+and read the result back as a scriptable response.
 
 ## Targets and Scenarios
 
@@ -124,3 +143,5 @@ batch flow.
 `./mogan-cli scenario clipboard-smoke smoke` validates copy/paste.
 
 `./mogan-cli scenario file-smoke smoke /tmp/example.tm` exercises open/save/revert/close.
+
+`./mogan-cli scenario search-smoke smoke` exercises search navigation and replace.

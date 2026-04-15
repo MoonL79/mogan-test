@@ -115,7 +115,7 @@ else
 fi
 
 echo "Test 9: start-server dry-run builds the connectable server command..."
-START_SERVER_OUTPUT=$($CLI start-server --platform minimal --dry-run 2>&1) || true
+START_SERVER_OUTPUT=$($CLI start-server --dry-run 2>&1) || true
 if echo "$START_SERVER_OUTPUT" | grep -q 'moganstem' &&
    echo "$START_SERVER_OUTPUT" | grep -q -- '-server' &&
    echo "$START_SERVER_OUTPUT" | grep -q 'mogan-server-runtime.scm'; then
@@ -263,7 +263,36 @@ else
   fail "File dry-run workflow failed"
 fi
 
-echo "Test 17: traces command reports the current debug bundle..."
+echo "Test 17: search dry-runs build the expected search commands..."
+SEARCH_SET_OUTPUT=$($CLI search-set alpha --dry-run 2>&1) || true
+SEARCH_STATE_OUTPUT=$($CLI search-state --dry-run 2>&1) || true
+SEARCH_NEXT_OUTPUT=$($CLI search-next --dry-run 2>&1) || true
+SEARCH_PREV_OUTPUT=$($CLI search-prev --dry-run 2>&1) || true
+SEARCH_FIRST_OUTPUT=$($CLI search-first --dry-run 2>&1) || true
+SEARCH_LAST_OUTPUT=$($CLI search-last --dry-run 2>&1) || true
+REPLACE_SET_OUTPUT=$($CLI replace-set gamma --dry-run 2>&1) || true
+REPLACE_ONE_OUTPUT=$($CLI replace-one --dry-run 2>&1) || true
+REPLACE_ALL_OUTPUT=$($CLI replace-all --dry-run 2>&1) || true
+SCENARIO_SEARCH_DRY_RUN_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI scenario search-smoke smoke --dry-run 2>&1) || true
+if echo "$SEARCH_SET_OUTPUT" | grep -q 'mogan-test-search-set' &&
+   echo "$SEARCH_STATE_OUTPUT" | grep -q 'mogan-test-search-state' &&
+   echo "$SEARCH_NEXT_OUTPUT" | grep -q 'mogan-test-search-next' &&
+   echo "$SEARCH_PREV_OUTPUT" | grep -q 'mogan-test-search-prev' &&
+   echo "$SEARCH_FIRST_OUTPUT" | grep -q 'mogan-test-search-first' &&
+   echo "$SEARCH_LAST_OUTPUT" | grep -q 'mogan-test-search-last' &&
+   echo "$REPLACE_SET_OUTPUT" | grep -q 'mogan-test-replace-set' &&
+   echo "$REPLACE_ONE_OUTPUT" | grep -q 'mogan-test-replace-one' &&
+   echo "$REPLACE_ALL_OUTPUT" | grep -q 'mogan-test-replace-all' &&
+   echo "$SCENARIO_SEARCH_DRY_RUN_OUTPUT" | grep -q 'mogan-test-search-set' &&
+   echo "$SCENARIO_SEARCH_DRY_RUN_OUTPUT" | grep -q 'mogan-test-replace-set' &&
+   echo "$SCENARIO_SEARCH_DRY_RUN_OUTPUT" | grep -q 'mogan-test-replace-all'; then
+  pass "Search dry-runs print the expected search commands"
+else
+  fail "Search dry-run workflow failed"
+fi
+
+echo "Test 18: traces command reports the current debug bundle..."
 TRACES_OUTPUT=$($CLI traces 2>&1) || true
 if echo "$TRACES_OUTPUT" | grep -q '/tmp/mogan-test-connect-trace.log' &&
    echo "$TRACES_OUTPUT" | grep -q '/tmp/mogan-test-server-trace.log' &&
@@ -273,7 +302,7 @@ else
   fail "traces command did not report the expected debug bundle: $TRACES_OUTPUT"
 fi
 
-echo "Test 18: Shell wrapper syntax is valid..."
+echo "Test 19: Shell wrapper syntax is valid..."
 if bash -n "$CLI"; then
   pass "Shell wrapper syntax is valid"
 else
@@ -281,7 +310,7 @@ else
 fi
 
 if [[ $LIVE_MODE -eq 1 ]]; then
-  echo "Test 19: Live create-account reaches the running server..."
+  echo "Test 20: Live create-account reaches the running server..."
   LIVE_CREATE_OUTPUT=$($CLI create-account "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_NAME" "$LIVE_PASS" "$LIVE_EMAIL" 2>&1) || true
   if echo "$LIVE_CREATE_OUTPUT" | grep -q 'status: ok'; then
     pass "Live create-account succeeded against the running server"
@@ -291,7 +320,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
     fail "Live create-account failed: $LIVE_CREATE_OUTPUT"
   fi
 
-  echo "Test 20: Live connect reaches the running server..."
+  echo "Test 21: Live connect reaches the running server..."
   LIVE_CONNECT_OUTPUT=$($CLI connect "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_PASS" 2>&1) || true
   if echo "$LIVE_CONNECT_OUTPUT" | grep -q 'status: ok' &&
      echo "$LIVE_CONNECT_OUTPUT" | grep -q 'value: ready'; then
@@ -301,7 +330,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
   fi
 
   if [[ $EXPECT_SERVICES -eq 1 ]]; then
-    echo "Test 21: Live ping reaches the custom server runtime..."
+    echo "Test 22: Live ping reaches the custom server runtime..."
     LIVE_PING_OUTPUT=$($CLI ping "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_PASS" 2>&1) || true
     if echo "$LIVE_PING_OUTPUT" | grep -q 'status: ok' &&
        echo "$LIVE_PING_OUTPUT" | grep -q 'value: \"pong\"'; then
@@ -310,7 +339,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
       fail "Live ping failed: $LIVE_PING_OUTPUT"
     fi
 
-    echo "Test 22: Live smoke scenario reaches the running server..."
+    echo "Test 23: Live smoke scenario reaches the running server..."
     LIVE_SMOKE_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
       $CLI target save smoke "$LIVE_HOST" "$LIVE_PSEUDO" "$LIVE_NAME" "$LIVE_PASS" "$LIVE_EMAIL" >/dev/null 2>&1 && \
       MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
@@ -323,7 +352,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
       fail "Live smoke scenario failed: $LIVE_SMOKE_OUTPUT"
     fi
 
-    echo "Test 23: Live batch scenario reaches the running server..."
+    echo "Test 24: Live batch scenario reaches the running server..."
     LIVE_BATCH_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
       $CLI scenario batch-smoke smoke 2>&1) || true
     if echo "$LIVE_BATCH_OUTPUT" | grep -q 'status: ok' &&
@@ -334,7 +363,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
       fail "Live batch scenario failed: $LIVE_BATCH_OUTPUT"
     fi
 
-    echo "Test 24: Live history scenario reaches the running server..."
+    echo "Test 25: Live history scenario reaches the running server..."
     LIVE_HISTORY_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
       $CLI scenario history-smoke smoke 2>&1) || true
     if echo "$LIVE_HISTORY_OUTPUT" | grep -q 'status: ok' &&
@@ -347,7 +376,7 @@ if [[ $LIVE_MODE -eq 1 ]]; then
       fail "Live history scenario failed: $LIVE_HISTORY_OUTPUT"
     fi
 
-    echo "Test 25: Live clipboard scenario reaches the running server..."
+    echo "Test 26: Live clipboard scenario reaches the running server..."
     LIVE_CLIPBOARD_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
       $CLI scenario clipboard-smoke smoke 2>&1) || true
     if echo "$LIVE_CLIPBOARD_OUTPUT" | grep -q 'status: ok' &&
@@ -360,7 +389,19 @@ if [[ $LIVE_MODE -eq 1 ]]; then
       fail "Live clipboard scenario failed: $LIVE_CLIPBOARD_OUTPUT"
     fi
 
-    echo "Test 26: Live file scenario reaches the running server..."
+    echo "Test 27: Live search scenario reaches the running server..."
+    LIVE_SEARCH_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+      $CLI scenario search-smoke smoke 2>&1) || true
+    if echo "$LIVE_SEARCH_OUTPUT" | grep -q 'status: ok' &&
+       echo "$LIVE_SEARCH_OUTPUT" | grep -q 'search_query' &&
+       echo "$LIVE_SEARCH_OUTPUT" | grep -q 'replace_text' &&
+       echo "$LIVE_SEARCH_OUTPUT" | grep -q 'gamma beta gamma'; then
+      pass "Live search scenario succeeded against the custom server runtime"
+    else
+      fail "Live search scenario failed: $LIVE_SEARCH_OUTPUT"
+    fi
+
+    echo "Test 28: Live file scenario reaches the running server..."
     LIVE_FILE_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
       $CLI scenario file-smoke smoke "$FILE_TEST_PATH" 2>&1) || true
     if echo "$LIVE_FILE_OUTPUT" | grep -q 'status: ok' &&
@@ -381,7 +422,7 @@ if [[ $FAILED -eq 0 ]]; then
   echo ""
   echo "Runtime Note:"
   echo "  - Build with: ./mogan-cli build-client"
-  echo "  - Start a connectable runtime with: ./mogan-cli start-server --platform minimal"
+  echo "  - Start a connectable runtime with: ./mogan-cli start-server"
   echo "  - Or point --live validation at your own running moganstem -server instance"
   echo "  - Inspect account bootstrap with: ./mogan-cli create-account --dry-run"
   echo "  - Inspect connect/login with: ./mogan-cli connect --dry-run"
@@ -391,11 +432,13 @@ if [[ $FAILED -eq 0 ]]; then
   echo "  - Inspect history primitives with: ./mogan-cli undo --dry-run"
   echo "  - Inspect clipboard primitives with: ./mogan-cli copy --dry-run"
   echo "  - Inspect file lifecycle primitives with: ./mogan-cli open-file /tmp/example.tm --dry-run"
+  echo "  - Inspect search primitives with: ./mogan-cli search-set alpha --dry-run"
   echo "  - Save a target profile with: ./mogan-cli target save smoke"
   echo "  - Inspect batch workflows with: ./mogan-cli batch smoke -- new-document -- buffer-text"
   echo "  - Run a smoke scenario with: ./mogan-cli scenario smoke-edit"
   echo "  - Run the batch scenario with: ./mogan-cli scenario batch-smoke smoke"
   echo "  - Run the file scenario with: ./mogan-cli scenario file-smoke smoke /tmp/example.tm"
+  echo "  - Run the search scenario with: ./mogan-cli scenario search-smoke smoke"
   echo "  - Run the history scenario with: ./mogan-cli scenario history-smoke smoke"
   echo "  - Run the clipboard scenario with: ./mogan-cli scenario clipboard-smoke smoke"
   echo "  - Inspect trace and runtime files with: ./mogan-cli traces"
