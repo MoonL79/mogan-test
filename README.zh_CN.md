@@ -44,6 +44,7 @@
 - `./mogan-cli buffer-list`
 - `./mogan-cli open-file /tmp/example.tm`
 - `./mogan-cli save-as /tmp/example.tm`
+- `./mogan-cli export-buffer /tmp/example.html`
 - `./mogan-cli revert-buffer`
 - `./mogan-cli close-buffer`
 - `./mogan-cli search-state`
@@ -61,6 +62,7 @@
 - `./mogan-cli scenario smoke-edit`
 - `./mogan-cli scenario batch-smoke smoke`
 - `./mogan-cli scenario file-smoke smoke /tmp/example.tm`
+- `./mogan-cli scenario export-smoke smoke /tmp/example.html`
 - `./mogan-cli scenario search-smoke smoke`
 - `./mogan-cli scenario history-smoke smoke`
 - `./mogan-cli scenario clipboard-smoke smoke`
@@ -118,7 +120,8 @@
 26. `./mogan-cli replace-all`
 
 这条路径让 agent 可以检查状态、移动光标、管理编辑历史、使用剪贴板、
-管理文件型缓冲区、搜索和替换文本、插入文本，并把结果以脚本化形式读回。
+管理文件型缓冲区、导出到其他格式、搜索和替换文本、插入文本，并把结果
+以脚本化形式读回。
 
 ## Targets 和 Scenarios
 
@@ -138,5 +141,7 @@
 `./mogan-cli scenario clipboard-smoke smoke` 用来验证复制/粘贴。
 
 `./mogan-cli scenario file-smoke smoke /tmp/example.tm` 用来验证打开、另存、回退和关闭。
+
+`./mogan-cli scenario export-smoke smoke /tmp/example.html` 用来验证导出。
 
 `./mogan-cli scenario search-smoke smoke` 用来验证搜索导航和替换。

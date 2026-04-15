@@ -47,6 +47,7 @@ Run the live validation against that running instance:
 - `./mogan-cli buffer-list`
 - `./mogan-cli open-file /tmp/example.tm`
 - `./mogan-cli save-as /tmp/example.tm`
+- `./mogan-cli export-buffer /tmp/example.html`
 - `./mogan-cli revert-buffer`
 - `./mogan-cli close-buffer`
 - `./mogan-cli search-state`
@@ -64,6 +65,7 @@ Run the live validation against that running instance:
 - `./mogan-cli scenario smoke-edit`
 - `./mogan-cli scenario batch-smoke smoke`
 - `./mogan-cli scenario file-smoke smoke /tmp/example.tm`
+- `./mogan-cli scenario export-smoke smoke /tmp/example.html`
 - `./mogan-cli scenario search-smoke smoke`
 - `./mogan-cli scenario history-smoke smoke`
 - `./mogan-cli scenario clipboard-smoke smoke`
@@ -120,8 +122,8 @@ small set of low-level editing, history, clipboard, and file lifecycle primitive
 26. `./mogan-cli replace-all`
 
 This path lets agents inspect state, move the cursor, manage edit history, use
-the clipboard, manage file-backed buffers, search and replace text, insert text,
-and read the result back as a scriptable response.
+the clipboard, manage file-backed buffers, export to another format, search and
+replace text, insert text, and read the result back as a scriptable response.
 
 ## Targets and Scenarios
 
@@ -143,5 +145,7 @@ batch flow.
 `./mogan-cli scenario clipboard-smoke smoke` validates copy/paste.
 
 `./mogan-cli scenario file-smoke smoke /tmp/example.tm` exercises open/save/revert/close.
+
+`./mogan-cli scenario export-smoke smoke /tmp/example.html` exercises export.
 
 `./mogan-cli scenario search-smoke smoke` exercises search navigation and replace.

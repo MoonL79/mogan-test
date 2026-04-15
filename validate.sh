@@ -25,10 +25,13 @@ LIVE_PASS="${MOGAN_TEST_PASS:-test-pass}"
 LIVE_EMAIL="${MOGAN_TEST_EMAIL:-test@example.com}"
 TARGET_TEST_DIR="$(mktemp -d)"
 FILE_TEST_PATH="$(mktemp /tmp/mogan-test-file-XXXX.tm)"
+EXPORT_TEST_PATH="$(mktemp /tmp/mogan-test-export-XXXX.html)"
+rm -f "$EXPORT_TEST_PATH"
 
 cleanup() {
   rm -rf "$TARGET_TEST_DIR"
   rm -f "$FILE_TEST_PATH"
+  rm -f "$EXPORT_TEST_PATH"
 }
 
 trap cleanup EXIT
@@ -263,6 +266,18 @@ else
   fail "File dry-run workflow failed"
 fi
 
+echo "Test 17a: export dry-runs build the expected export commands..."
+EXPORT_BUFFER_OUTPUT=$($CLI export-buffer "$EXPORT_TEST_PATH" --dry-run 2>&1) || true
+SCENARIO_EXPORT_DRY_RUN_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+  $CLI scenario export-smoke smoke "$EXPORT_TEST_PATH" --dry-run 2>&1) || true
+if echo "$EXPORT_BUFFER_OUTPUT" | grep -q 'mogan-test-export-buffer' &&
+   echo "$SCENARIO_EXPORT_DRY_RUN_OUTPUT" | grep -q 'mogan-test-export-buffer' &&
+   echo "$SCENARIO_EXPORT_DRY_RUN_OUTPUT" | grep -q 'mogan-test-write-text'; then
+  pass "Export dry-runs print the expected export commands"
+else
+  fail "Export dry-run workflow failed"
+fi
+
 echo "Test 17: search dry-runs build the expected search commands..."
 SEARCH_SET_OUTPUT=$($CLI search-set alpha --dry-run 2>&1) || true
 SEARCH_STATE_OUTPUT=$($CLI search-state --dry-run 2>&1) || true
@@ -412,6 +427,19 @@ if [[ $LIVE_MODE -eq 1 ]]; then
     else
       fail "Live file scenario failed: $LIVE_FILE_OUTPUT"
     fi
+
+    echo "Test 28a: Live export scenario reaches the running server..."
+    rm -f "$EXPORT_TEST_PATH"
+    LIVE_EXPORT_OUTPUT=$(MOGAN_TEST_TARGET_DIR="$TARGET_TEST_DIR" \
+      $CLI scenario export-smoke smoke "$EXPORT_TEST_PATH" 2>&1) || true
+    if echo "$LIVE_EXPORT_OUTPUT" | grep -q 'status: ok' &&
+       echo "$LIVE_EXPORT_OUTPUT" | grep -q 'exported_to' &&
+       echo "$LIVE_EXPORT_OUTPUT" | grep -q 'export smoke' &&
+       [[ -s "$EXPORT_TEST_PATH" ]]; then
+      pass "Live export scenario succeeded against the custom server runtime"
+    else
+      fail "Live export scenario failed: $LIVE_EXPORT_OUTPUT"
+    fi
   fi
 fi
 
@@ -432,12 +460,14 @@ if [[ $FAILED -eq 0 ]]; then
   echo "  - Inspect history primitives with: ./mogan-cli undo --dry-run"
   echo "  - Inspect clipboard primitives with: ./mogan-cli copy --dry-run"
   echo "  - Inspect file lifecycle primitives with: ./mogan-cli open-file /tmp/example.tm --dry-run"
+  echo "  - Inspect export primitives with: ./mogan-cli export-buffer /tmp/example.html --dry-run"
   echo "  - Inspect search primitives with: ./mogan-cli search-set alpha --dry-run"
   echo "  - Save a target profile with: ./mogan-cli target save smoke"
   echo "  - Inspect batch workflows with: ./mogan-cli batch smoke -- new-document -- buffer-text"
   echo "  - Run a smoke scenario with: ./mogan-cli scenario smoke-edit"
   echo "  - Run the batch scenario with: ./mogan-cli scenario batch-smoke smoke"
   echo "  - Run the file scenario with: ./mogan-cli scenario file-smoke smoke /tmp/example.tm"
+  echo "  - Run the export scenario with: ./mogan-cli scenario export-smoke smoke /tmp/example.html"
   echo "  - Run the search scenario with: ./mogan-cli scenario search-smoke smoke"
   echo "  - Run the history scenario with: ./mogan-cli scenario history-smoke smoke"
   echo "  - Run the clipboard scenario with: ./mogan-cli scenario clipboard-smoke smoke"

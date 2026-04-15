@@ -248,6 +248,27 @@
             (server-return envelope (mogan-test-buffer-list-value)))
           (server-error envelope "no current buffer")))))
 
+(define (mogan-test-export-state-value path)
+  (append
+    (list (cons "exported_to" path))
+    (mogan-test-control-state)))
+
+(define (mogan-test-export-state-string path)
+  (object->string* (mogan-test-export-state-value path)))
+
+(tm-service (mogan-test-export-buffer path)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: export-buffer path="
+      path))
+  (when (mogan-test-require-login envelope)
+    (let ((u (system->url path)))
+      (export-buffer path)
+      (if (url-exists? u)
+          (server-return envelope (mogan-test-export-state-string path))
+          (server-error envelope
+                        (string-append "export failed: " path))))))
+
 (define (mogan-test-search-buffer-url)
   (search-buffer))
 

@@ -20,6 +20,7 @@ DEFAULT_NAME="${MOGAN_TEST_NAME:-Test User}"
 DEFAULT_PASS="${MOGAN_TEST_PASS:-test-pass}"
 DEFAULT_EMAIL="${MOGAN_TEST_EMAIL:-test@example.com}"
 DEFAULT_FILE_PATH="${MOGAN_TEST_FILE_PATH:-/tmp/mogan-test-file-smoke.tm}"
+DEFAULT_EXPORT_PATH="${MOGAN_TEST_EXPORT_PATH:-/tmp/mogan-test-export.html}"
 TARGET_DIR="${MOGAN_TEST_TARGET_DIR:-$HOME/.config/mogan-test/targets}"
 
 if ! command -v gf >/dev/null 2>&1; then
@@ -489,6 +490,7 @@ EOF
 smoke-edit
 batch-smoke
 file-smoke
+export-smoke
 search-smoke
 history-smoke
 clipboard-smoke
@@ -552,6 +554,33 @@ EOF
           batch_args+=("$dry_run_flag")
         fi
         batch_args+=(-- new-document -- write-text "file smoke" -- save-as "$file_path" -- insert-text "!" -- revert-buffer -- buffer-text -- new-document -- close-buffer -- open-file "$file_path" -- buffer-text -- buffer-list)
+        exec "$0" "${batch_args[@]}"
+        ;;
+      export-smoke)
+        shift || true
+        target_name="smoke"
+        export_path="$DEFAULT_EXPORT_PATH"
+        dry_run_flag=""
+        if [[ $# -gt 0 ]]; then
+          if [[ "${1:-}" == "--dry-run" ]]; then
+            dry_run_flag="--dry-run"
+          else
+            target_name="$1"
+            shift || true
+            if [[ $# -gt 0 ]] && [[ "${1:-}" != "--dry-run" ]]; then
+              export_path="$1"
+              shift || true
+            fi
+            if [[ "${1:-}" == "--dry-run" ]]; then
+              dry_run_flag="--dry-run"
+            fi
+          fi
+        fi
+        batch_args=(batch "$target_name")
+        if [[ -n "$dry_run_flag" ]]; then
+          batch_args+=("$dry_run_flag")
+        fi
+        batch_args+=(-- new-document -- write-text "export smoke" -- export-buffer "$export_path")
         exec "$0" "${batch_args[@]}"
         ;;
       search-smoke)
@@ -622,7 +651,7 @@ EOF
         ;;
       "")
         cat <<'EOF'
-Usage: mogan-cli scenario <list|smoke-edit|batch-smoke|file-smoke|history-smoke|clipboard-smoke> [args...]
+Usage: mogan-cli scenario <list|smoke-edit|batch-smoke|file-smoke|export-smoke|history-smoke|clipboard-smoke> [args...]
 EOF
         exit 1
         ;;
@@ -740,16 +769,24 @@ EOF
     esac
     run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
     ;;
-  open-file|save-as)
+  open-file|save-as|export-buffer)
     shift || true
     dry_run_flag=""
+    default_path="$DEFAULT_FILE_PATH"
+    if [[ "$command_name" == "export-buffer" ]]; then
+      default_path="$DEFAULT_EXPORT_PATH"
+    fi
     if [[ "${1:-}" == "--dry-run" ]]; then
-      file_path="$DEFAULT_FILE_PATH"
+      file_path="$default_path"
       dry_run_flag="--dry-run"
     else
       file_path="${1:-}"
       if [[ -z "$file_path" ]]; then
-        echo '{"status":"error","message":"File path is required"}' >&2
+        if [[ "$command_name" == "export-buffer" ]]; then
+          echo '{"status":"error","message":"Export path is required"}' >&2
+        else
+          echo '{"status":"error","message":"File path is required"}' >&2
+        fi
         exit 1
       fi
       if [[ "${2:-}" == "--dry-run" ]]; then
@@ -765,6 +802,9 @@ EOF
         ;;
       save-as)
         remote_command="(mogan-test-save-as \"$(scheme_escape "$file_path")\")"
+        ;;
+      export-buffer)
+        remote_command="(mogan-test-export-buffer \"$(scheme_escape "$file_path")\")"
         ;;
     esac
     run_remote_runtime_command "$remote_command" "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_PASS" "$dry_run_flag"
