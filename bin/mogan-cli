@@ -3,9 +3,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SCHEME_SCRIPT="${SCRIPT_DIR}/mogan-cli.scm"
-RUNTIME_SCRIPT="${SCRIPT_DIR}/mogan-runtime.scm"
-SERVER_RUNTIME_SCRIPT="${SCRIPT_DIR}/mogan-server-runtime.scm"
+SCHEME_SCRIPT="${SCRIPT_DIR}/../src/cli/mogan-cli.scm"
+RUNTIME_SCRIPT="${SCRIPT_DIR}/../src/cli/runtime/client.scm"
+SERVER_RUNTIME_SCRIPT="${SCRIPT_DIR}/../src/cli/runtime/mogan-server-runtime.scm"
 MOGAN_ROOT="/home/mingshen/git/mogan"
 CONNECT_TRACE="/tmp/mogan-test-connect-trace.log"
 SERVER_TRACE="/tmp/mogan-test-server-trace.log"

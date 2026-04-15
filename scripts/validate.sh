@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-CLI="./mogan-cli"
+CLI="./bin/mogan-cli"
 FAILED=0
 LIVE_MODE=0
 EXPECT_SERVICES=0
@@ -67,9 +67,9 @@ else
 fi
 
 echo "Test 3: Scheme runtime files exist..."
-if [[ -f "./mogan-cli.scm" ]] &&
-   [[ -f "./mogan-runtime.scm" ]] &&
-   [[ -f "./mogan-server-runtime.scm" ]]; then
+if [[ -f "./src/cli/mogan-cli.scm" ]] &&
+   [[ -f "./src/cli/runtime/client.scm" ]] &&
+   [[ -f "./src/cli/runtime/mogan-server-runtime.scm" ]]; then
   pass "CLI and runtime Scheme files exist"
 else
   fail "Required Scheme files are missing"
