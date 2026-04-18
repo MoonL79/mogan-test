@@ -310,6 +310,7 @@ handle_simple_control_command() {
     paste) handle_basic_remote_command "(mogan-test-clipboard-paste)" "$@" ;;
     clear-undo-history) handle_basic_remote_command "(mogan-test-clear-history)" "$@" ;;
     insert-return) handle_basic_remote_command "(mogan-test-insert-return)" "$@" ;;
+    exit-right) handle_basic_remote_command "(mogan-test-structured-exit-right)" "$@" ;;
     delete-left) handle_basic_remote_command "(mogan-test-delete-left)" "$@" ;;
     delete-right) handle_basic_remote_command "(mogan-test-delete-right)" "$@" ;;
     save-buffer) handle_basic_remote_command "(mogan-test-save-buffer)" "$@" ;;
@@ -563,6 +564,9 @@ handle_insert_basic_command() {
     insert-bold) remote_command="(mogan-test-insert-bold-b64 \"$(base64_encode_text "$value")\")" ;;
     insert-italic) remote_command="(mogan-test-insert-italic-b64 \"$(base64_encode_text "$value")\")" ;;
     insert-code) remote_command="(mogan-test-insert-code-b64 \"$(base64_encode_text "$value")\")" ;;
+    insert-section) remote_command="(mogan-test-insert-section-b64 \"$(base64_encode_text "$value")\")" ;;
+    insert-subsection) remote_command="(mogan-test-insert-subsection-b64 \"$(base64_encode_text "$value")\")" ;;
+    insert-subsubsection) remote_command="(mogan-test-insert-subsubsection-b64 \"$(base64_encode_text "$value")\")" ;;
   esac
 
   run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"

@@ -50,6 +50,7 @@ Commands:
   clear-undo-history - Reset the current edit history
   insert-text    - Insert text at the cursor
   insert-return  - Insert a raw return
+  exit-right     - Exit the current structured node to the right
   delete-*       - Delete at the cursor
   save-buffer    - Save the current buffer
   switch-buffer  - Switch to another buffer
@@ -90,6 +91,9 @@ Commands:
   insert-bold    - Insert bold text
   insert-italic  - Insert italic text
   insert-code    - Insert code text
+  insert-section - Insert a section title
+  insert-subsection - Insert a subsection title
+  insert-subsubsection - Insert a subsubsection title
   insert-link    - Insert a hyperlink (url text)
 EOF
 }

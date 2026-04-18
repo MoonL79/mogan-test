@@ -1633,6 +1633,104 @@
   ) ;when
 ) ;tm-service
 
+(define (mogan-test-insert-section-like! kind title)
+  (when (in-math?)
+    (mogan-test-leave-inline-math!)
+  ) ;when
+  (make-section kind)
+  (when (> (string-length title) 0)
+    (insert title)
+  ) ;when
+) ;define
+
+(tm-service (mogan-test-insert-section title)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-section title="
+      title
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (mogan-test-insert-section-like! 'section title)
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-insert-section-b64 b64-text)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-section-b64 bytes="
+      (number->string (string-length b64-text))
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (mogan-test-insert-section-like! 'section (mogan-test-decode-utf8-text b64-text))
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-insert-subsection title)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-subsection title="
+      title
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (mogan-test-insert-section-like! 'subsection title)
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-insert-subsection-b64 b64-text)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-subsection-b64 bytes="
+      (number->string (string-length b64-text))
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (mogan-test-insert-section-like! 'subsection (mogan-test-decode-utf8-text b64-text))
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-insert-subsubsection title)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-subsubsection title="
+      title
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (mogan-test-insert-section-like! 'subsubsection title)
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-insert-subsubsection-b64 b64-text)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-subsubsection-b64 bytes="
+      (number->string (string-length b64-text))
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (mogan-test-insert-section-like! 'subsubsection (mogan-test-decode-utf8-text b64-text))
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-structured-exit-right)
+  (mogan-test-server-log
+    "mogan-server-runtime: structured-exit-right"
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (structured-exit-right)
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
 (tm-service (mogan-test-insert-link url text)
   (mogan-test-server-log
     (string-append
