@@ -13,6 +13,13 @@
 (define *search-control-surface*
   "search-state, search-set, search-next, search-prev, search-first, search-last, replace-set, replace-one, replace-all")
 
+(define *shell-entry-script* "./bin/mogan-cli")
+(define *shell-lib-dir* "./bin/lib/mogan-cli")
+(define *scheme-command-dir* "./src/cli/commands")
+(define *runtime-dir* "./src/cli/runtime")
+(define *split-layout*
+  "shell entry in bin/mogan-cli; shell command handlers in bin/lib/mogan-cli/*.sh; Scheme status/workflow router in src/cli/mogan-cli.scm and src/cli/commands/*.scm; live controller/server runtimes in src/cli/runtime/*.scm")
+
 (define (status-data)
   (list
     (cons "mogan_root" *mogan-root*)
@@ -32,6 +39,11 @@
     (cons "runtime_output_path" *runtime-output-path*)
     (cons "traces_command" "./mogan-cli traces")
     (cons "controller_platform" "minimal")
+    (cons "shell_entry_script" *shell-entry-script*)
+    (cons "shell_lib_dir" *shell-lib-dir*)
+    (cons "scheme_command_dir" *scheme-command-dir*)
+    (cons "runtime_dir" *runtime-dir*)
+    (cons "split_layout" *split-layout*)
     (cons "control_surface" *control-surface*)
     (cons "batch_command" *batch-command*)
     (cons "scenario_command" "./mogan-cli scenario smoke-edit")

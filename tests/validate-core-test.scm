@@ -34,6 +34,18 @@
   ) ;if
 ) ;define
 
+(define (assert-output-contains msg text needle)
+  (if (string-contains? text needle)
+      (test-pass msg)
+      (test-fail (string-append msg
+                                " missing="
+                                (object->string needle)
+                                " output="
+                                (object->string text))
+      ) ;test-fail
+  ) ;if
+) ;define
+
 (define (main)
   (assert-equal "shell-quote handles plain text"
                 (shell-quote "alpha")
@@ -57,6 +69,12 @@
                 (command->string "./bin/mogan-cli" (list "search-set" "alpha beta" "--dry-run"))
                 "'./bin/mogan-cli' 'search-set' 'alpha beta' '--dry-run'"
   ) ;assert-equal
+  (let ((status-output (command-output "./bin/mogan-cli status")))
+    (assert-output-contains "status reports shell split entry" status-output "\"shell_entry_script\"")
+    (assert-output-contains "status reports shell lib dir" status-output "\"shell_lib_dir\"")
+    (assert-output-contains "status reports scheme command dir" status-output "\"scheme_command_dir\"")
+    (assert-output-contains "status reports runtime dir" status-output "\"runtime_dir\"")
+  ) ;let
   (if (= *test-failures* 0)
       (exit 0)
       (exit 1)

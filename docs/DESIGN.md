@@ -5,7 +5,10 @@
 ```
 command line
   -> mogan-cli
-    -> Goldfish command router for status/workflow
+    -> shell entry script in `bin/mogan-cli`
+    -> shell command helpers in `bin/lib/mogan-cli/*.sh`
+    -> Goldfish status/workflow router in `src/cli/mogan-cli.scm`
+    -> split Scheme metadata modules in `src/cli/commands/*.scm`
     -> xmake build entry for moganstem
     -> explicit `moganstem -server` startup path as the connectable runtime
   -> server-side runtime loaded via `-x` to register test services and test-scoped login
@@ -34,6 +37,34 @@ The platform is split into a connectable server path and a separate full-client 
 The control client is a second `moganstem` runtime that loads `mogan-runtime.scm`,
 logs in through the existing `client-start` and `remote-login` glue,
 and then invokes a server-side command.
+
+The CLI implementation is now also split by responsibility:
+
+1. Shell entry and execution layer
+   - `bin/mogan-cli`
+   - `bin/lib/mogan-cli/common.sh`
+   - `bin/lib/mogan-cli/runtime.sh`
+   - `bin/lib/mogan-cli/handlers.sh`
+   - `bin/lib/mogan-cli/targets.sh`
+   - `bin/lib/mogan-cli/scenarios.sh`
+   - `bin/lib/mogan-cli/help.sh`
+2. Scheme metadata and status layer
+   - `src/cli/mogan-cli.scm`
+   - `src/cli/commands/common.scm`
+   - `src/cli/commands/router.scm`
+   - `src/cli/commands/buffer.scm`
+   - `src/cli/commands/edit.scm`
+   - `src/cli/commands/file.scm`
+   - `src/cli/commands/search.scm`
+   - `src/cli/commands/batch.scm`
+   - `src/cli/commands/target.scm`
+3. Live runtime layer
+   - `src/cli/runtime/client.scm`
+   - `src/cli/runtime/mogan-server-runtime.scm`
+
+This split keeps the shell wrapper responsible for real command execution and
+argument handling, while the Scheme layer remains the structured source of
+status, workflow, and command-surface metadata.
 
 In this architecture, the server is the intermediary control surface.
 `mogan-test` connects to that running server and uses it to indirectly control the live Mogan process.

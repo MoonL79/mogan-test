@@ -66,13 +66,27 @@ else
   fail "CLI script is not executable"
 fi
 
-echo "Test 3: Scheme runtime files exist..."
+echo "Test 3: Split shell, command, and runtime files exist..."
 if [[ -f "./src/cli/mogan-cli.scm" ]] &&
    [[ -f "./src/cli/runtime/client.scm" ]] &&
-   [[ -f "./src/cli/runtime/mogan-server-runtime.scm" ]]; then
-  pass "CLI and runtime Scheme files exist"
+   [[ -f "./src/cli/runtime/mogan-server-runtime.scm" ]] &&
+   [[ -f "./bin/lib/mogan-cli/common.sh" ]] &&
+   [[ -f "./bin/lib/mogan-cli/handlers.sh" ]] &&
+   [[ -f "./bin/lib/mogan-cli/help.sh" ]] &&
+   [[ -f "./bin/lib/mogan-cli/runtime.sh" ]] &&
+   [[ -f "./bin/lib/mogan-cli/scenarios.sh" ]] &&
+   [[ -f "./bin/lib/mogan-cli/targets.sh" ]] &&
+   [[ -f "./src/cli/commands/common.scm" ]] &&
+   [[ -f "./src/cli/commands/router.scm" ]] &&
+   [[ -f "./src/cli/commands/buffer.scm" ]] &&
+   [[ -f "./src/cli/commands/edit.scm" ]] &&
+   [[ -f "./src/cli/commands/file.scm" ]] &&
+   [[ -f "./src/cli/commands/search.scm" ]] &&
+   [[ -f "./src/cli/commands/batch.scm" ]] &&
+   [[ -f "./src/cli/commands/target.scm" ]]; then
+  pass "Split shell, command, and runtime files exist"
 else
-  fail "Required Scheme files are missing"
+  fail "Required split shell, command, or runtime files are missing"
 fi
 
 echo "Test 4: CLI returns usage without arguments..."
@@ -97,6 +111,17 @@ if echo "$STATUS_OUTPUT" | grep -q '"build_command":"xmake b stem"' &&
   pass "Status reports both full-client and server-capable startup paths"
 else
   fail "Status output missing startup path details: $STATUS_OUTPUT"
+fi
+
+echo "Test 6a: Status reports the split CLI layout..."
+if echo "$STATUS_OUTPUT" | grep -q '"shell_entry_script":"' &&
+   echo "$STATUS_OUTPUT" | grep -q '"shell_lib_dir":"' &&
+   echo "$STATUS_OUTPUT" | grep -q '"scheme_command_dir":"' &&
+   echo "$STATUS_OUTPUT" | grep -q '"runtime_dir":"' &&
+   echo "$STATUS_OUTPUT" | grep -q '"split_layout":"'; then
+  pass "Status reports the split shell, command, and runtime layout"
+else
+  fail "Status output missing split layout details: $STATUS_OUTPUT"
 fi
 
 echo "Test 7: Workflow command reports the explicit server-first workflow..."
