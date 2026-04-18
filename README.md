@@ -175,6 +175,7 @@
 
 - 只要插入了任何结构化节点，都先执行 `exit-right`，再决定是否 `insert-return` 或继续写正文。
 - 不要假设结构插入后光标会自动回到外层。
+- `section`、`subsection`、`subsubsection` 的标题文本不要带显式编号，编号交给环境自动生成。
 
 关键使用规则：
 
@@ -226,6 +227,7 @@
 - `state` 里的 `buffer_text` 是序列化树，不是渲染后的纯文本。
 - 如果你要验证“真实结构”，应看 `buffer-text` 或 `state` 返回的 tree，而不是只看视觉渲染。
 - 对于任何结构节点，不要假设普通 `insert-return` 就能自动跳出结构。应显式调用 `exit-right`。
+- 对于 `insert-section`、`insert-subsection`、`insert-subsubsection`，不要把 `1.`、`1.1`、`第一节` 之类编号写进标题文本。
 - 不要把 `<math|...>`、`<with|...>` 之类原始 TeXmacs 标记当纯文本写进去。应使用专门的结构化命令。
 
 ## 关键路径

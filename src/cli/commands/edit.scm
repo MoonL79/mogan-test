@@ -8,10 +8,10 @@
   "`gf` 负责 CLI 路由和进程调度；server runtime 会把测试服务和测试专用登录 shim 加载到目标 `moganstem` 中；controller runtime 通过现有 client/server 胶水逻辑登录并调用这些服务")
 
 (define *workflow-formatting-policy*
-  "写入 Mogan 时不要把 <with|...>、<math|...>、<matrix|...> 等原始 TeXmacs 标记当作正文文本直接插入；先写纯文本结构，再调用现有命令处理标题、强调、代码、链接、公式、分式、矩阵等结构；只要插入了任何结构化节点，紧接着优先调用 `exit-right` 跳出当前结构，再根据需要使用 `insert-return` 和 `insert-text` 继续写内容；完成前自检文档中不应残留原始 <tag|...> 文本")
+  "写入 Mogan 时不要把 <with|...>、<math|...>、<matrix|...> 等原始 TeXmacs 标记当作正文文本直接插入；先写纯文本结构，再调用现有命令处理标题、强调、代码、链接、公式、分式、矩阵等结构；只要插入了任何结构化节点，紧接着优先调用 `exit-right` 跳出当前结构，再根据需要使用 `insert-return` 和 `insert-text` 继续写内容；如果使用 `insert-section`、`insert-subsection`、`insert-subsubsection`，标题文本本身不要携带显式编号，编号交给环境自动生成；完成前自检文档中不应残留原始 <tag|...> 文本")
 
 (define *workflow-next-step*
-  "先用 `xmake b stem` 构建，再用 `mogan-cli start-server` 或等价的 `moganstem -server -x '(load .../mogan-server-runtime.scm)'` 启动可连接的 server，接着用 `mogan-cli target save` 保存 target 配置，然后通过 `target run`、`batch`、`scenario smoke-edit`、`scenario batch-smoke`、`scenario file-smoke`、`scenario export-smoke`、`scenario style-smoke`、`scenario layout-smoke`、`scenario search-smoke`、`scenario history-smoke`、`scenario clipboard-smoke` 驱动 live server；凡是插入 section、subsection、公式、矩阵、表格、强调、链接等结构，都先执行 `exit-right`，再按需要执行 `insert-return` 和正文写入")
+  "先用 `xmake b stem` 构建，再用 `mogan-cli start-server` 或等价的 `moganstem -server -x '(load .../mogan-server-runtime.scm)'` 启动可连接的 server，接着用 `mogan-cli target save` 保存 target 配置，然后通过 `target run`、`batch`、`scenario smoke-edit`、`scenario batch-smoke`、`scenario file-smoke`、`scenario export-smoke`、`scenario style-smoke`、`scenario layout-smoke`、`scenario search-smoke`、`scenario history-smoke`、`scenario clipboard-smoke` 驱动 live server；凡是插入 section、subsection、公式、矩阵、表格、强调、链接等结构，都先执行 `exit-right`，再按需要执行 `insert-return` 和正文写入；section 类标题不要手写编号，交给环境自动编号")
 
 (define *connect-required-order* "build-client -> start-server -> create-account -> connect")
 (define *connect-dispatch-path* "`mogan-cli connect` -> controller `moganstem -platform minimal -x` -> 加载 `mogan-runtime.scm` -> `remote-login`")

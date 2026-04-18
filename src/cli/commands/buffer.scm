@@ -19,7 +19,7 @@
 (define *runtime-dir* "./src/cli/runtime")
 (define *formatting-policy-path* "./playbooks/assets/mogan-formatting-agent-prompt.md")
 (define *formatting-policy-embedded*
-  "写入 Mogan 时不要把 <with|...>、<math|...>、<matrix|...> 等原始 TeXmacs 标记当作正文文本直接插入；先写纯文本结构，再用现有命令处理标题、强调、代码、链接、公式、分式、矩阵等结构；只要插入了任何结构化节点，紧接着优先调用 `exit-right` 跳出当前结构，再根据需要使用 `insert-return` 和 `insert-text` 继续写内容；完成前自检文档中不应残留原始 <tag|...> 文本")
+  "写入 Mogan 时不要把 <with|...>、<math|...>、<matrix|...> 等原始 TeXmacs 标记当作正文文本直接插入；先写纯文本结构，再用现有命令处理标题、强调、代码、链接、公式、分式、矩阵等结构；只要插入了任何结构化节点，紧接着优先调用 `exit-right` 跳出当前结构，再根据需要使用 `insert-return` 和 `insert-text` 继续写内容；如果使用 `insert-section`、`insert-subsection`、`insert-subsubsection`，标题文本本身不要携带显式编号，编号交给环境自动生成；完成前自检文档中不应残留原始 <tag|...> 文本")
 (define *split-layout*
   "shell 入口位于 `bin/mogan-cli`；shell 命令处理位于 `bin/lib/mogan-cli/*.sh`；Scheme 的 status/workflow 路由位于 `src/cli/mogan-cli.scm` 和 `src/cli/commands/*.scm`；live controller/server runtime 位于 `src/cli/runtime/*.scm`")
 
