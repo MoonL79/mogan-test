@@ -1,3 +1,5 @@
 .cache/
 .texmacs-home/
 .pytest_cache/
+.codex
+.xmake/
