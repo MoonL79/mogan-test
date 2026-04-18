@@ -40,6 +40,7 @@ Commands:
   current-buffer - Query the current buffer from the running Mogan instance
   new-document   - Create a new document through the running Mogan instance
   write-text     - Replace the current buffer with plain text content
+  stream-text    - Stream text from stdin or a file into the current buffer
   buffer-text    - Read back the current buffer text content
   state          - Inspect buffer, cursor, selection, and text state
   move-*         - Cursor movement primitives

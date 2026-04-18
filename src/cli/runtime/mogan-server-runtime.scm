@@ -1250,33 +1250,23 @@
 ) ;tm-service
 
 (define (mogan-test-build-matrix rows cols data)
-  (let ((cells (map (lambda (cell) `(cell ,cell)) data)))
-    `(matrix
-       (tformat
-         (cwith "1" "1" ,(number->string cols) ,(number->string cols)
-           (cflag "" (bformat)))
-         (toward "c" "l" "c" "r"
-           ,@(let loop ((r 1) (result '()))
-               (if (> r rows)
-                   (reverse result)
-                   (loop (+ r 1)
-                         (cons `(cwith ,(number->string r) ,(number->string r)
-                                    "1" ,(number->string cols)
-                                    (ccol "c"))
-                               result))))
-         ,@(let loop ((r 1) (c 1) (cells cells) (result '()))
-             (cond
-               ((null? cells)
-                (reverse result))
-               ((> c cols)
-                (loop (+ r 1) 1 cells result))
-               (else
-                (loop r (+ c 1) (cdr cells)
-                      (cons `(cwith ,(number->string r) ,(number->string r)
-                                 ,(number->string c) ,(number->string c)
-                                 (cell ,(car cells)))
-                            result))))))))
-  ) ;let
+  `(matrix
+     (table
+       ,@(let loop ((r 0)
+                    (cells data)
+                    (result '()))
+           (if (= r rows)
+               (reverse result)
+               (let row-loop ((c 0)
+                              (remaining cells)
+                              (row-cells '()))
+                 (if (= c cols)
+                     (loop (+ r 1)
+                           remaining
+                           (cons `(row ,@(reverse row-cells)) result))
+                     (row-loop (+ c 1)
+                               (cdr remaining)
+                               (cons `(cell ,(car remaining)) row-cells))))))))
 ) ;define
 
 (define (mogan-test-filter pred items)
@@ -1339,7 +1329,7 @@
     ) ;string-append
   ) ;mogan-test-server-log
   (when (mogan-test-require-login envelope)
-    (mogan-test-insert-inline-math-tree! `(fraction ,numerator ,denominator))
+    (mogan-test-insert-inline-math-tree! `(frac ,numerator ,denominator))
     (mogan-test-return-control-state envelope)
   ) ;when
 ) ;tm-service

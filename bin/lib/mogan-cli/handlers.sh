@@ -355,6 +355,107 @@ handle_write_text() {
   run_remote_runtime_command "(mogan-test-write-text \"$(scheme_escape "$text")\")" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
 }
 
+handle_stream_text() {
+  shift || true
+  local chunk_size=256
+  local source_path=""
+  local start_mode=""
+  local dry_run_flag=""
+  local server_name="$DEFAULT_HOST"
+  local pseudo="$DEFAULT_PSEUDO"
+  local passwd="$DEFAULT_PASS"
+  local last_output=""
+  local chunk=""
+  local chunk_index=0
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --chunk-size)
+        if [[ $# -lt 2 ]]; then
+          echo '{"status":"error","message":"--chunk-size requires a value"}' >&2
+          exit 1
+        fi
+        chunk_size="$2"
+        shift 2
+        ;;
+      --file)
+        if [[ $# -lt 2 ]]; then
+          echo '{"status":"error","message":"--file requires a path"}' >&2
+          exit 1
+        fi
+        source_path="$2"
+        shift 2
+        ;;
+      --new-document|--replace)
+        if [[ -n "$start_mode" ]] && [[ "$start_mode" != "$1" ]]; then
+          echo '{"status":"error","message":"Use only one of --new-document or --replace"}' >&2
+          exit 1
+        fi
+        start_mode="$1"
+        shift
+        ;;
+      --dry-run)
+        dry_run_flag="--dry-run"
+        shift
+        ;;
+      --help)
+        cat <<'EOF'
+Usage: mogan-cli stream-text [--new-document|--replace] [--chunk-size N] [--file PATH] [host [pseudo [pass]]] [--dry-run]
+Reads text from stdin or --file and sends it to the current Mogan buffer in incremental insert-text chunks.
+EOF
+        exit 0
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  if ! [[ "$chunk_size" =~ ^[1-9][0-9]*$ ]]; then
+    echo '{"status":"error","message":"chunk size must be a positive integer"}' >&2
+    exit 1
+  fi
+
+  server_name="${1:-$DEFAULT_HOST}"
+  pseudo="${2:-$DEFAULT_PSEUDO}"
+  passwd="${3:-$DEFAULT_PASS}"
+
+  if [[ -n "$source_path" ]]; then
+    if [[ ! -f "$source_path" ]]; then
+      echo "{\"status\":\"error\",\"message\":\"file not found: $source_path\"}" >&2
+      exit 1
+    fi
+    exec 3<"$source_path"
+  else
+    if [[ -t 0 ]]; then
+      echo '{"status":"error","message":"stream-text expects stdin or --file PATH"}' >&2
+      exit 1
+    fi
+    exec 3<&0
+  fi
+
+  if [[ "$start_mode" == "--new-document" ]]; then
+    last_output="$(run_remote_runtime_command "(mogan-test-new-document)" "$server_name" "$pseudo" "$passwd" "$dry_run_flag")"
+  elif [[ "$start_mode" == "--replace" ]]; then
+    last_output="$(run_remote_runtime_command "(mogan-test-write-text \"\")" "$server_name" "$pseudo" "$passwd" "$dry_run_flag")"
+  fi
+
+  while IFS= read -r -N "$chunk_size" chunk <&3 || [[ -n "$chunk" ]]; do
+    chunk_index=$((chunk_index + 1))
+    printf '== stream chunk %s (%s bytes)\n' "$chunk_index" "${#chunk}" >&2
+    last_output="$(run_remote_runtime_command "(mogan-test-insert-text \"$(scheme_escape "$chunk")\")" "$server_name" "$pseudo" "$passwd" "$dry_run_flag")"
+    chunk=""
+  done
+
+  exec 3<&-
+
+  if [[ -z "$last_output" ]]; then
+    last_output="$(run_remote_runtime_command "(mogan-test-buffer-text)" "$server_name" "$pseudo" "$passwd" "$dry_run_flag")"
+  fi
+
+  printf '%s\n' "$last_output"
+}
+
 handle_control_value_command() {
   shift || true
   local control_value
