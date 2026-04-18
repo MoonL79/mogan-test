@@ -1273,7 +1273,11 @@
         )
         (else
          (let ((matrix-content (mogan-test-build-matrix row-count col-count cells)))
-           (mogan-test-insert-inline-math-tree! matrix-content)
+           (when (in-math?)
+             (mogan-test-leave-inline-math!)
+           ) ;when
+           (insert `(equation* (document ,matrix-content)))
+           (mogan-test-leave-displayed-equation!)
            (mogan-test-return-control-state envelope)
          ) ;let
         ) ;else

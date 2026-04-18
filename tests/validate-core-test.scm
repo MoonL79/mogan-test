@@ -74,6 +74,8 @@
     (assert-output-contains "status reports shell lib dir" status-output "\"shell_lib_dir\"")
     (assert-output-contains "status reports scheme command dir" status-output "\"scheme_command_dir\"")
     (assert-output-contains "status reports runtime dir" status-output "\"runtime_dir\"")
+    (assert-output-contains "status reports formatting policy path" status-output "\"formatting_policy_path\"")
+    (assert-output-contains "status reports embedded formatting policy" status-output "\"formatting_policy_embedded\"")
   ) ;let
   (if (= *test-failures* 0)
       (exit 0)

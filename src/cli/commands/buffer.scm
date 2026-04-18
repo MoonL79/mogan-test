@@ -17,6 +17,9 @@
 (define *shell-lib-dir* "./bin/lib/mogan-cli")
 (define *scheme-command-dir* "./src/cli/commands")
 (define *runtime-dir* "./src/cli/runtime")
+(define *formatting-policy-path* "./playbooks/assets/mogan-formatting-agent-prompt.md")
+(define *formatting-policy-embedded*
+  "写入 Mogan 时不要把 <with|...>、<math|...>、<matrix|...> 等原始 TeXmacs 标记当作正文文本直接插入；先写纯文本结构，再用现有命令处理标题、强调、代码、链接、公式、分式、矩阵等结构；完成前自检文档中不应残留原始 <tag|...> 文本")
 (define *split-layout*
   "shell entry in bin/mogan-cli; shell command handlers in bin/lib/mogan-cli/*.sh; Scheme status/workflow router in src/cli/mogan-cli.scm and src/cli/commands/*.scm; live controller/server runtimes in src/cli/runtime/*.scm")
 
@@ -43,6 +46,8 @@
     (cons "shell_lib_dir" *shell-lib-dir*)
     (cons "scheme_command_dir" *scheme-command-dir*)
     (cons "runtime_dir" *runtime-dir*)
+    (cons "formatting_policy_path" *formatting-policy-path*)
+    (cons "formatting_policy_embedded" *formatting-policy-embedded*)
     (cons "split_layout" *split-layout*)
     (cons "control_surface" *control-surface*)
     (cons "batch_command" *batch-command*)
