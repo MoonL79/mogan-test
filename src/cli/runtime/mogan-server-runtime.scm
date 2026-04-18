@@ -5,6 +5,7 @@
 ) ;use-modules
 
 (load "/home/mingshen/git/mogan/TeXmacs/progs/generic/search-widgets.scm")
+(load "/home/mingshen/git/mogan/TeXmacs/progs/convert/latex/init-latex.scm")
 
 (define *mogan-test-server-trace-path* "/tmp/mogan-test-server-trace.log")
 (define *mogan-test-login-table* (make-ahash-table))
@@ -1089,14 +1090,6 @@
   ) ;when
 ) ;tm-service
 
-(define (mogan-test-insert-math-text! make-math text)
-  (make-math)
-  (if (not (string=? text ""))
-      (insert text)
-      #f
-  ) ;if
-) ;define
-
 (define (mogan-test-insert-inline-math-tree! tree)
   (if (in-math?)
       (insert tree)
@@ -1130,6 +1123,45 @@
   ) ;and-with
 ) ;define
 
+(define (mogan-test-latex->stree latex-code)
+  (tree->stree (latex->texmacs (parse-latex latex-code)))
+) ;define
+
+(define (mogan-test-strip-single-document-wrapper stree)
+  (if (and (pair? stree)
+           (eq? (car stree) 'document)
+           (pair? (cdr stree))
+           (null? (cddr stree)))
+      (cadr stree)
+      stree
+  ) ;if
+) ;define
+
+(define (mogan-test-inline-latex->stree formula)
+  (mogan-test-latex->stree (string-append "\\(" formula "\\)"))
+) ;define
+
+(define (mogan-test-display-latex->stree formula)
+  (mogan-test-latex->stree (string-append "\\[" formula "\\]"))
+) ;define
+
+(define (mogan-test-inline-math-content stree)
+  (if (and (pair? stree) (eq? (car stree) 'math))
+      (let ((body (cdr stree)))
+        (cond
+          ((null? body) "")
+          ((null? (cdr body))
+           (car body)
+          ) ;
+          (else
+           (cons 'concat body)
+          ) ;else
+        ) ;cond
+      ) ;let
+      stree
+  ) ;if
+) ;define
+
 (tm-service (mogan-test-insert-equation formula)
   (mogan-test-server-log
     (string-append
@@ -1142,13 +1174,9 @@
       (mogan-test-leave-inline-math!)
     ) ;when
     (insert
-      `(equation*
-         (document
-           (with "mode" "math"
-             (with "math-display" "true" ,formula)
-           ) ;with
-         ) ;document
-       ) ;equation*
+      (mogan-test-strip-single-document-wrapper
+        (mogan-test-display-latex->stree formula)
+      ) ;mogan-test-strip-single-document-wrapper
     ) ;insert
     (mogan-test-leave-displayed-equation!)
     (mogan-test-return-control-state envelope)
@@ -1163,7 +1191,12 @@
     ) ;string-append
   ) ;mogan-test-server-log
   (when (mogan-test-require-login envelope)
-    (mogan-test-insert-math-text! (lambda () (make 'math)) formula)
+    (let ((parsed-stree (mogan-test-inline-latex->stree formula)))
+      (if (in-math?)
+          (insert (mogan-test-inline-math-content parsed-stree))
+          (insert parsed-stree)
+      ) ;if
+    ) ;let
     (mogan-test-return-control-state envelope)
   ) ;when
 ) ;tm-service
