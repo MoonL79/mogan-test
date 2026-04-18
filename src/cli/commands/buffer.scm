@@ -1,5 +1,5 @@
 (define *control-surface*
-  "state, move-*, select-*, undo, redo, copy, cut, paste, clear-undo-history, insert-text, delete-*, save-buffer, export-buffer, set-main-style, set-document-language, add-style-package, remove-style-package, set-page-medium, set-page-type, set-page-orientation, switch-buffer")
+  "state, move-*, select-*, undo, redo, copy, cut, paste, clear-undo-history, insert-text, insert-return, exit-right, insert-section, insert-subsection, insert-subsubsection, delete-*, save-buffer, export-buffer, set-main-style, set-document-language, add-style-package, remove-style-package, set-page-medium, set-page-type, set-page-orientation, switch-buffer")
 
 (define *file-control-surface*
   "buffer-list, open-file, save-as, export-buffer, revert-buffer, close-buffer")
@@ -19,9 +19,9 @@
 (define *runtime-dir* "./src/cli/runtime")
 (define *formatting-policy-path* "./playbooks/assets/mogan-formatting-agent-prompt.md")
 (define *formatting-policy-embedded*
-  "写入 Mogan 时不要把 <with|...>、<math|...>、<matrix|...> 等原始 TeXmacs 标记当作正文文本直接插入；先写纯文本结构，再用现有命令处理标题、强调、代码、链接、公式、分式、矩阵等结构；完成前自检文档中不应残留原始 <tag|...> 文本")
+  "写入 Mogan 时不要把 <with|...>、<math|...>、<matrix|...> 等原始 TeXmacs 标记当作正文文本直接插入；先写纯文本结构，再用现有命令处理标题、强调、代码、链接、公式、分式、矩阵等结构；只要插入了任何结构化节点，紧接着优先调用 `exit-right` 跳出当前结构，再根据需要使用 `insert-return` 和 `insert-text` 继续写内容；完成前自检文档中不应残留原始 <tag|...> 文本")
 (define *split-layout*
-  "shell entry in bin/mogan-cli; shell command handlers in bin/lib/mogan-cli/*.sh; Scheme status/workflow router in src/cli/mogan-cli.scm and src/cli/commands/*.scm; live controller/server runtimes in src/cli/runtime/*.scm")
+  "shell 入口位于 `bin/mogan-cli`；shell 命令处理位于 `bin/lib/mogan-cli/*.sh`；Scheme 的 status/workflow 路由位于 `src/cli/mogan-cli.scm` 和 `src/cli/commands/*.scm`；live controller/server runtime 位于 `src/cli/runtime/*.scm`")
 
 (define (status-data)
   (list
@@ -32,8 +32,8 @@
     (cons "internal_command" *internal-command*)
     (cons "client_path" (built-client-path))
     (cons "client_built" (client-built?))
-    (cons "gf_layer" "Routes commands and prepares process execution")
-    (cons "mogan_layer" "Runs Scheme through `-x` inside the live Mogan runtime")
+    (cons "gf_layer" "负责命令路由并准备进程执行")
+    (cons "mogan_layer" "通过 `-x` 在 live Mogan runtime 内执行 Scheme")
     (cons "connect_host" *default-host*)
     (cons "connect_port" *default-port*)
     (cons "connect_trace_path" *connect-trace-path*)
@@ -67,12 +67,12 @@
     (cons "style_control_surface" *style-control-surface*)
     (cons "layout_control_surface" *layout-control-surface*)
     (cons "search_control_surface" *search-control-surface*)
-    (cons "service_runtime_requirement" "create-account, login, and custom service commands require the target server instance to load mogan-server-runtime.scm")
-    (cons "auth_model" "mogan-test currently uses a test-scoped users.scm account store and server-side login shim inside mogan-server-runtime.scm")
+    (cons "service_runtime_requirement" "`create-account`、`login` 和自定义服务命令都要求目标 server 实例加载 `mogan-server-runtime.scm`")
+    (cons "auth_model" "`mogan-test` 当前使用测试专用的 `users.scm` 账户存储，以及位于 `mogan-server-runtime.scm` 中的 server 侧登录 shim")
     (cons "next_step" *workflow-next-step*)
-    (cons "connect_status" "explicit-server-path-ready-for-live-validation")
-    (cons "connect_note" "The real control path is an explicit `moganstem -server` instance; `xmake r stem` remains useful for product startup checks but is not treated as proof of a connectable local server")
-    (cons "connect_blocker" "Cross-process validation still depends on a reachable local `-server` instance and the test runtime loaded from mogan-server-runtime.scm")))
+    (cons "connect_status" "显式 server 路径已准备好进行 live 验证")
+    (cons "connect_note" "真实控制路径依赖显式启动的 `moganstem -server` 实例；`xmake r stem` 仍可用于产品启动检查，但不能视为本地 server 可连接的证明")
+    (cons "connect_blocker" "跨进程验证仍然依赖一个可达的本地 `-server` 实例，以及已加载 `mogan-server-runtime.scm` 的测试运行时")))
 
 (define (cmd-status args)
   (apply make-success (status-data)))

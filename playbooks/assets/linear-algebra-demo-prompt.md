@@ -1,4 +1,4 @@
-# Linear Algebra Demo Prompt
+# 线性代数演示提示词
 
 请读取 `playbooks/assets/linear-algebra-raw-notes.txt` 中的原始课堂笔记内容，并把它整理到当前正在运行的 Mogan 文档中。
 
@@ -51,4 +51,3 @@
 - 不要写得像论文
 - 不要加入原始笔记中完全没有提到的大段新知识
 - 可以做少量必要的补充，使逻辑更完整
-
