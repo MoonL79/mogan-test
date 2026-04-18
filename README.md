@@ -173,8 +173,8 @@
 
 统一规则：
 
-- 只要插入了任何结构化节点，都先执行 `exit-right`，再决定是否 `insert-return` 或继续写正文。
-- 不要假设结构插入后光标会自动回到外层。
+- 只有 `section`、`subsection`、`subsubsection` 这类标题结构需要在插入后执行 `exit-right`。
+- 如果标题后需要正文段落，再执行 `insert-return`。
 - `section`、`subsection`、`subsubsection` 的标题文本不要带显式编号，编号交给环境自动生成。
 
 关键使用规则：
@@ -186,7 +186,7 @@
 ./bin/mogan-cli insert-text "正文"
 ```
 
-如果省略 `exit-right`，后续编辑可能仍然停留在刚插入的结构内部，而不是落到你预期的外层位置。
+如果省略 `exit-right`，后续编辑可能仍然停留在 section 标题结构内部，而不是落到你预期的正文位置。
 
 ## 推荐模式
 
@@ -195,8 +195,8 @@
 1. `new-document`
 2. 必要时先设置 style / language
 3. 先插结构：section、subsection、equation、matrix、table
-4. 任意结构插入后立刻 `exit-right`
-5. 用 `insert-return` 制造真实段落边界
+4. section 类插入后立刻 `exit-right`
+5. 需要正文段落时，用 `insert-return` 制造真实段落边界
 6. 用 `state` 或 `buffer-text` 验证 tree 形状
 7. 如果需要交付物，再 `export-buffer`
 
@@ -226,7 +226,7 @@
 - `create-account`、`connect` 以及所有远程控制命令都依赖 server 侧 runtime 已被加载。
 - `state` 里的 `buffer_text` 是序列化树，不是渲染后的纯文本。
 - 如果你要验证“真实结构”，应看 `buffer-text` 或 `state` 返回的 tree，而不是只看视觉渲染。
-- 对于任何结构节点，不要假设普通 `insert-return` 就能自动跳出结构。应显式调用 `exit-right`。
+- 对于 section 标题，不要假设普通 `insert-return` 就能自动跳出结构。应显式调用 `exit-right`。
 - 对于 `insert-section`、`insert-subsection`、`insert-subsubsection`，不要把 `1.`、`1.1`、`第一节` 之类编号写进标题文本。
 - 不要把 `<math|...>`、`<with|...>` 之类原始 TeXmacs 标记当纯文本写进去。应使用专门的结构化命令。
 
