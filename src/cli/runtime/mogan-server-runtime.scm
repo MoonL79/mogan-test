@@ -275,6 +275,10 @@
   (map mogan-test-buffer-record (buffer-list))
 ) ;define
 
+(define (mogan-test-decode-utf8-text b64-text)
+  (utf8->cork (decode-base64 b64-text))
+) ;define
+
 (tm-service (mogan-test-write-text text)
   (mogan-test-server-log
     (string-append
@@ -284,6 +288,22 @@
   ) ;mogan-test-server-log
   (when (mogan-test-require-login envelope)
     (buffer-set-body (current-buffer) `(document ,text))
+    (server-return envelope (mogan-test-buffer-text-value))
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-write-text-b64 b64-text)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: write-text-b64 bytes="
+      (number->string (string-length b64-text))
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (buffer-set-body
+      (current-buffer)
+      `(document ,(mogan-test-decode-utf8-text b64-text))
+    ) ;buffer-set-body
     (server-return envelope (mogan-test-buffer-text-value))
   ) ;when
 ) ;tm-service
@@ -929,6 +949,19 @@
   ) ;when
 ) ;tm-service
 
+(tm-service (mogan-test-insert-text-b64 b64-text)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-text-b64 bytes="
+      (number->string (string-length b64-text))
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (insert (mogan-test-decode-utf8-text b64-text))
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
 (tm-service (mogan-test-insert-return)
   (mogan-test-run-control-action
     envelope
@@ -1531,6 +1564,19 @@
   ) ;when
 ) ;tm-service
 
+(tm-service (mogan-test-insert-bold-b64 b64-text)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-bold-b64 bytes="
+      (number->string (string-length b64-text))
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (insert `(bold ,(mogan-test-decode-utf8-text b64-text)))
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
 (tm-service (mogan-test-insert-italic text)
   (mogan-test-server-log
     (string-append
@@ -1540,6 +1586,19 @@
   ) ;mogan-test-server-log
   (when (mogan-test-require-login envelope)
     (insert `(it ,text))
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-insert-italic-b64 b64-text)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-italic-b64 bytes="
+      (number->string (string-length b64-text))
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (insert `(it ,(mogan-test-decode-utf8-text b64-text)))
     (mogan-test-return-control-state envelope)
   ) ;when
 ) ;tm-service
@@ -1557,6 +1616,19 @@
   ) ;when
 ) ;tm-service
 
+(tm-service (mogan-test-insert-code-b64 b64-text)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-code-b64 bytes="
+      (number->string (string-length b64-text))
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (insert `(code ,(mogan-test-decode-utf8-text b64-text)))
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
 (tm-service (mogan-test-insert-link url text)
   (mogan-test-server-log
     (string-append
@@ -1566,6 +1638,19 @@
   ) ;mogan-test-server-log
   (when (mogan-test-require-login envelope)
     (insert `(hlink ,text ,url))
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-insert-link-b64 url b64-text)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-link-b64 url="
+      url " bytes=" (number->string (string-length b64-text))
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (insert `(hlink ,(mogan-test-decode-utf8-text b64-text) ,url))
     (mogan-test-return-control-state envelope)
   ) ;when
 ) ;tm-service

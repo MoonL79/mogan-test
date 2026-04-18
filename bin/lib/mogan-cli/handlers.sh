@@ -352,7 +352,7 @@ handle_write_text() {
     fi
   fi
 
-  run_remote_runtime_command "(mogan-test-write-text \"$(scheme_escape "$text")\")" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
+  run_remote_runtime_command "(mogan-test-write-text-b64 \"$(base64_encode_text "$text")\")" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
 }
 
 handle_stream_text() {
@@ -437,13 +437,13 @@ EOF
   if [[ "$start_mode" == "--new-document" ]]; then
     last_output="$(run_remote_runtime_command "(mogan-test-new-document)" "$server_name" "$pseudo" "$passwd" "$dry_run_flag")"
   elif [[ "$start_mode" == "--replace" ]]; then
-    last_output="$(run_remote_runtime_command "(mogan-test-write-text \"\")" "$server_name" "$pseudo" "$passwd" "$dry_run_flag")"
+    last_output="$(run_remote_runtime_command "(mogan-test-write-text-b64 \"$(base64_encode_text "")\")" "$server_name" "$pseudo" "$passwd" "$dry_run_flag")"
   fi
 
   while IFS= read -r -N "$chunk_size" chunk <&3 || [[ -n "$chunk" ]]; do
     chunk_index=$((chunk_index + 1))
     printf '== stream chunk %s (%s bytes)\n' "$chunk_index" "${#chunk}" >&2
-    last_output="$(run_remote_runtime_command "(mogan-test-insert-text \"$(scheme_escape "$chunk")\")" "$server_name" "$pseudo" "$passwd" "$dry_run_flag")"
+    last_output="$(run_remote_runtime_command "(mogan-test-insert-text-b64 \"$(base64_encode_text "$chunk")\")" "$server_name" "$pseudo" "$passwd" "$dry_run_flag")"
     chunk=""
   done
 
@@ -487,7 +487,7 @@ handle_control_value_command() {
   case "$command_name" in
     move-to-line) remote_command="(mogan-test-move-to-line \"$(scheme_escape "$control_value")\")" ;;
     move-to-column) remote_command="(mogan-test-move-to-column \"$(scheme_escape "$control_value")\")" ;;
-    insert-text) remote_command="(mogan-test-insert-text \"$(scheme_escape "$control_value")\")" ;;
+    insert-text) remote_command="(mogan-test-insert-text-b64 \"$(base64_encode_text "$control_value")\")" ;;
     switch-buffer) remote_command="(mogan-test-switch-buffer \"$(scheme_escape "$control_value")\")" ;;
   esac
 
@@ -560,9 +560,9 @@ handle_insert_basic_command() {
     insert-sqrt) remote_command="(mogan-test-insert-sqrt \"$(scheme_escape "$value")\")" ;;
     insert-sup) remote_command="(mogan-test-insert-sup \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\")" ;;
     insert-sub) remote_command="(mogan-test-insert-sub \"$(scheme_escape "$value")\")" ;;
-    insert-bold) remote_command="(mogan-test-insert-bold \"$(scheme_escape "$value")\")" ;;
-    insert-italic) remote_command="(mogan-test-insert-italic \"$(scheme_escape "$value")\")" ;;
-    insert-code) remote_command="(mogan-test-insert-code \"$(scheme_escape "$value")\")" ;;
+    insert-bold) remote_command="(mogan-test-insert-bold-b64 \"$(base64_encode_text "$value")\")" ;;
+    insert-italic) remote_command="(mogan-test-insert-italic-b64 \"$(base64_encode_text "$value")\")" ;;
+    insert-code) remote_command="(mogan-test-insert-code-b64 \"$(base64_encode_text "$value")\")" ;;
   esac
 
   run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
@@ -635,7 +635,7 @@ handle_insert_complex_command() {
     insert-sum) remote_command="(mogan-test-insert-sum \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\" \"$(scheme_escape "$arg3")\")" ;;
     insert-integral) remote_command="(mogan-test-insert-integral \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\" \"$(scheme_escape "$arg3")\")" ;;
     insert-table) remote_command="(mogan-test-insert-table \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\")" ;;
-    insert-link) remote_command="(mogan-test-insert-link \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\")" ;;
+    insert-link) remote_command="(mogan-test-insert-link-b64 \"$(scheme_escape "$arg1")\" \"$(base64_encode_text "$arg2")\")" ;;
   esac
 
   run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"

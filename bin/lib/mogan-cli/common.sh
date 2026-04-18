@@ -49,6 +49,10 @@ scheme_escape() {
   printf '%s' "$value"
 }
 
+base64_encode_text() {
+  printf '%s' "${1-}" | base64 | tr -d '\n'
+}
+
 require_target_name() {
   local target_name="${1:-}"
   if [[ -z "$target_name" ]]; then
