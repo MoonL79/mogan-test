@@ -1132,23 +1132,32 @@ EOF
     ;;
   write-text)
     shift || true
-    dry_run_flag="${5:-}"
+    dry_run_flag=""
     if [[ "${1:-}" == "--dry-run" ]]; then
-      set -- "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_PASS" "hello from mogan-test" "--dry-run"
+      set -- "hello from mogan-test" "$DEFAULT_HOST" "$DEFAULT_PSEUDO" "$DEFAULT_PASS" "--dry-run"
       dry_run_flag="--dry-run"
     elif [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]]; then
       dry_run_flag="--dry-run"
     fi
-    if [[ $# -le 1 ]]; then
+    if [[ $# -eq 0 ]]; then
+      text="hello from mogan-test"
       server_name="$DEFAULT_HOST"
       pseudo="$DEFAULT_PSEUDO"
       passwd="$DEFAULT_PASS"
+    elif [[ $# -eq 2 ]] && [[ "${2:-}" == "--dry-run" ]]; then
       text="${1:-hello from mogan-test}"
+      server_name="$DEFAULT_HOST"
+      pseudo="$DEFAULT_PSEUDO"
+      passwd="$DEFAULT_PASS"
+      dry_run_flag="--dry-run"
     else
-      server_name="${1:-$DEFAULT_HOST}"
-      pseudo="${2:-$DEFAULT_PSEUDO}"
-      passwd="${3:-$DEFAULT_PASS}"
-      text="${4:-hello from mogan-test}"
+      text="${1:-hello from mogan-test}"
+      server_name="${2:-$DEFAULT_HOST}"
+      pseudo="${3:-$DEFAULT_PSEUDO}"
+      passwd="${4:-$DEFAULT_PASS}"
+      if [[ "${5:-}" == "--dry-run" ]]; then
+        dry_run_flag="--dry-run"
+      fi
     fi
     remote_command="(mogan-test-write-text \"$(scheme_escape "$text")\")"
     run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
@@ -1212,6 +1221,160 @@ EOF
     esac
     run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
     ;;
+  insert-equation|insert-inline-equation|insert-fraction|insert-sqrt|insert-sup|insert-sub|insert-bold|insert-italic|insert-code)
+    shift || true
+    dry_run_flag=""
+    arg1=""
+    arg2=""
+    value=""
+    if [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]] || [[ "${2:-}" == "--dry-run" ]]; then
+      dry_run_flag="--dry-run"
+    fi
+    case "$command_name" in
+      insert-fraction)
+        if [[ $# -lt 2 ]]; then
+          echo '{"status":"error","message":"Usage: insert-fraction <numerator> <denominator>"}' >&2
+          exit 1
+        fi
+        arg1="${1:-}"
+        arg2="${2:-}"
+        server_name="${3:-$DEFAULT_HOST}"
+        pseudo="${4:-$DEFAULT_PSEUDO}"
+        passwd="${5:-$DEFAULT_PASS}"
+        if [[ "${6:-}" == "--dry-run" ]]; then
+          dry_run_flag="--dry-run"
+        fi
+        ;;
+      insert-sup)
+        if [[ $# -lt 2 ]]; then
+          echo '{"status":"error","message":"Usage: insert-sup <sub> <sup>"}' >&2
+          exit 1
+        fi
+        arg1="${1:-}"
+        arg2="${2:-}"
+        server_name="${3:-$DEFAULT_HOST}"
+        pseudo="${4:-$DEFAULT_PSEUDO}"
+        passwd="${5:-$DEFAULT_PASS}"
+        if [[ "${6:-}" == "--dry-run" ]]; then
+          dry_run_flag="--dry-run"
+        fi
+        ;;
+      *)
+        if [[ $# -lt 1 ]]; then
+          echo '{"status":"error","message":"Usage: insert-<command> <value>"}' >&2
+          exit 1
+        fi
+        value="${1:-}"
+        server_name="${2:-$DEFAULT_HOST}"
+        pseudo="${3:-$DEFAULT_PSEUDO}"
+        passwd="${4:-$DEFAULT_PASS}"
+        if [[ "${5:-}" == "--dry-run" ]]; then
+          dry_run_flag="--dry-run"
+        fi
+        ;;
+    esac
+    case "$command_name" in
+      insert-equation)
+        remote_command="(mogan-test-insert-equation \"$(scheme_escape "$value")\")"
+        ;;
+      insert-inline-equation)
+        remote_command="(mogan-test-insert-inline-equation \"$(scheme_escape "$value")\")"
+        ;;
+      insert-fraction)
+        remote_command="(mogan-test-insert-fraction \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\")"
+        ;;
+      insert-sqrt)
+        remote_command="(mogan-test-insert-sqrt \"$(scheme_escape "$value")\")"
+        ;;
+      insert-sup)
+        remote_command="(mogan-test-insert-sup \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\")"
+        ;;
+      insert-sub)
+        remote_command="(mogan-test-insert-sub \"$(scheme_escape "$value")\")"
+        ;;
+      insert-bold)
+        remote_command="(mogan-test-insert-bold \"$(scheme_escape "$value")\")"
+        ;;
+      insert-italic)
+        remote_command="(mogan-test-insert-italic \"$(scheme_escape "$value")\")"
+        ;;
+      insert-code)
+        remote_command="(mogan-test-insert-code \"$(scheme_escape "$value")\")"
+        ;;
+    esac
+    run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
+    ;;
+  insert-matrix|insert-sum|insert-integral|insert-table|insert-link)
+    shift || true
+    dry_run_flag=""
+    if [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]]; then
+      dry_run_flag="--dry-run"
+    fi
+    case "$command_name" in
+      insert-matrix|insert-sum|insert-integral)
+        if [[ $# -lt 3 ]]; then
+          echo '{"status":"error","message":"Usage: insert-<command> <arg1> <arg2> <arg3> [server pseudo pass] [--dry-run]"}' >&2
+          exit 1
+        fi
+        arg1="${1:-}"
+        arg2="${2:-}"
+        arg3="${3:-}"
+        if [[ "${4:-}" == "--dry-run" ]]; then
+          server_name="$DEFAULT_HOST"
+          pseudo="$DEFAULT_PSEUDO"
+          passwd="$DEFAULT_PASS"
+          dry_run_flag="--dry-run"
+        else
+          server_name="${4:-$DEFAULT_HOST}"
+          pseudo="${5:-$DEFAULT_PSEUDO}"
+          passwd="${6:-$DEFAULT_PASS}"
+          if [[ "${7:-}" == "--dry-run" ]]; then
+            dry_run_flag="--dry-run"
+          fi
+        fi
+        ;;
+      insert-table|insert-link)
+        if [[ $# -lt 2 ]]; then
+          echo '{"status":"error","message":"Usage: insert-<command> <arg1> <arg2> [server pseudo pass] [--dry-run]"}' >&2
+          exit 1
+        fi
+        arg1="${1:-}"
+        arg2="${2:-}"
+        arg3=""
+        if [[ "${3:-}" == "--dry-run" ]]; then
+          server_name="$DEFAULT_HOST"
+          pseudo="$DEFAULT_PSEUDO"
+          passwd="$DEFAULT_PASS"
+          dry_run_flag="--dry-run"
+        else
+          server_name="${3:-$DEFAULT_HOST}"
+          pseudo="${4:-$DEFAULT_PSEUDO}"
+          passwd="${5:-$DEFAULT_PASS}"
+          if [[ "${6:-}" == "--dry-run" ]]; then
+            dry_run_flag="--dry-run"
+          fi
+        fi
+        ;;
+    esac
+    case "$command_name" in
+      insert-matrix)
+        remote_command="(mogan-test-insert-matrix \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\" \"$(scheme_escape "$arg3")\")"
+        ;;
+      insert-sum)
+        remote_command="(mogan-test-insert-sum \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\" \"$(scheme_escape "$arg3")\")"
+        ;;
+      insert-integral)
+        remote_command="(mogan-test-insert-integral \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\" \"$(scheme_escape "$arg3")\")"
+        ;;
+      insert-table)
+        remote_command="(mogan-test-insert-table \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\")"
+        ;;
+      insert-link)
+        remote_command="(mogan-test-insert-link \"$(scheme_escape "$arg1")\" \"$(scheme_escape "$arg2")\")"
+        ;;
+    esac
+    run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
+    ;;
   traces)
     shift || true
     show_traces
@@ -1268,6 +1431,20 @@ Commands:
   scenario history-smoke - Run a target-backed undo/redo workflow
   scenario clipboard-smoke - Run a target-backed clipboard workflow
   traces         - Print the current connect/server trace bundle
+  insert-equation - Insert a LaTeX equation
+  insert-inline-equation - Insert an inline LaTeX equation
+  insert-matrix  - Insert a matrix (rows cols data)
+  insert-fraction - Insert a fraction (numerator denominator)
+  insert-sqrt    - Insert a square root
+  insert-sup     - Insert superscript (sub sup)
+  insert-sub     - Insert subscript
+  insert-sum     - Insert summation (from to body)
+  insert-integral - Insert integral (from to body)
+  insert-table   - Insert a table (rows cols)
+  insert-bold    - Insert bold text
+  insert-italic  - Insert italic text
+  insert-code    - Insert code text
+  insert-link    - Insert a hyperlink (url text)
 EOF
     exit 0
     ;;
