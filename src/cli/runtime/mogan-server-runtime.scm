@@ -2,6 +2,8 @@
 
 (use-modules (server server-base)
              (generic search-widgets)
+             (dynamic session-edit)
+             (utils plugins plugin-eval)
 ) ;use-modules
 
 (load "/home/mingshen/git/mogan/TeXmacs/progs/generic/search-widgets.scm")
@@ -1629,6 +1631,94 @@
   ) ;mogan-test-server-log
   (when (mogan-test-require-login envelope)
     (insert `(code ,(mogan-test-decode-utf8-text b64-text)))
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(define (mogan-test-insert-session! language variant)
+  (when (in-math?)
+    (mogan-test-leave-inline-math!)
+  ) ;when
+  (make-session language variant)
+) ;define
+
+(tm-service (mogan-test-insert-session language variant)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-session language="
+      language
+      " variant="
+      variant
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (mogan-test-insert-session! language variant)
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-insert-session-b64 b64-language b64-variant)
+  (mogan-test-server-log
+    (string-append
+      "mogan-server-runtime: insert-session-b64 language-bytes="
+      (number->string (string-length b64-language))
+      " variant-bytes="
+      (number->string (string-length b64-variant))
+    ) ;string-append
+  ) ;mogan-test-server-log
+  (when (mogan-test-require-login envelope)
+    (mogan-test-insert-session!
+      (mogan-test-decode-utf8-text b64-language)
+      (mogan-test-decode-utf8-text b64-variant)
+    ) ;mogan-test-insert-session!
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-session-evaluate)
+  (mogan-test-server-log "mogan-server-runtime: session-evaluate")
+  (when (mogan-test-require-login envelope)
+    (session-evaluate)
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-session-evaluate-all)
+  (mogan-test-server-log "mogan-server-runtime: session-evaluate-all")
+  (when (mogan-test-require-login envelope)
+    (session-evaluate-all)
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-session-evaluate-above)
+  (mogan-test-server-log "mogan-server-runtime: session-evaluate-above")
+  (when (mogan-test-require-login envelope)
+    (session-evaluate-above)
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-session-evaluate-below)
+  (mogan-test-server-log "mogan-server-runtime: session-evaluate-below")
+  (when (mogan-test-require-login envelope)
+    (session-evaluate-below)
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-session-interrupt)
+  (mogan-test-server-log "mogan-server-runtime: session-interrupt")
+  (when (mogan-test-require-login envelope)
+    (plugin-interrupt)
+    (mogan-test-return-control-state envelope)
+  ) ;when
+) ;tm-service
+
+(tm-service (mogan-test-session-stop)
+  (mogan-test-server-log "mogan-server-runtime: session-stop")
+  (when (mogan-test-require-login envelope)
+    (plugin-stop)
     (mogan-test-return-control-state envelope)
   ) ;when
 ) ;tm-service

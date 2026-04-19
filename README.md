@@ -188,6 +188,46 @@
 
 如果省略 `exit-right`，后续编辑可能仍然停留在 section 标题结构内部，而不是落到你预期的正文位置。
 
+### Session 结构与执行
+
+- `insert-session`
+- `session-evaluate`
+- `session-evaluate-all`
+- `session-evaluate-above`
+- `session-evaluate-below`
+- `session-interrupt`
+- `session-stop`
+
+`insert-session` 插入的是真实 session 节点，不是普通代码文本块。
+
+最小用法：
+
+```bash
+./bin/mogan-cli new-document
+./bin/mogan-cli insert-session scheme
+./bin/mogan-cli insert-text "(+ 1 2)"
+./bin/mogan-cli session-evaluate
+./bin/mogan-cli state
+```
+
+预期 tree 会出现类似结构：
+
+```scheme
+(document
+  (session "scheme" "default"
+    (document
+      (unfolded-io "Scheme] " (document "(+ 1 2)") (document "3"))
+      (input "Scheme] " (document "")))))
+```
+
+补充约定：
+
+- `insert-session <language> [variant]`，例如 `insert-session python` 或 `insert-session scheme`
+- 插入后光标通常会落在当前 session 的输入区，后续可直接 `insert-text`
+- `session-evaluate` 只执行当前输入
+- `session-evaluate-all`、`session-evaluate-above`、`session-evaluate-below` 对应批量执行不同范围
+- 如果执行中的 session 卡住，可用 `session-interrupt` 或 `session-stop`
+
 ## 推荐模式
 
 ### 安全通用模式

@@ -64,12 +64,13 @@ case "$command_name" in
   search-state|search-next|search-prev|search-first|search-last|replace-one|replace-all)
     handle_search_action_command "$@"
     ;;
-  ping|current-buffer|new-document|buffer-text|state|move-left|move-right|move-up|move-down|move-start|move-end|move-start-line|move-end-line|move-start-paragraph|move-end-paragraph|move-word-left|move-word-right|select-all|select-start|select-end|clear-selection|undo|redo|copy|cut|paste|clear-undo-history|insert-return|exit-right|delete-left|delete-right|save-buffer)
+  ping|current-buffer|new-document|buffer-text|state|move-left|move-right|move-up|move-down|move-start|move-end|move-start-line|move-end-line|move-start-paragraph|move-end-paragraph|move-word-left|move-word-right|select-all|select-start|select-end|clear-selection|undo|redo|copy|cut|paste|clear-undo-history|insert-return|exit-right|delete-left|delete-right|save-buffer|session-evaluate|session-evaluate-all|session-evaluate-above|session-evaluate-below|session-interrupt|session-stop)
     handle_simple_control_command "$@"
     ;;
   write-text) handle_write_text "$@" ;;
   stream-text) handle_stream_text "$@" ;;
   move-to-line|move-to-column|insert-text|switch-buffer) handle_control_value_command "$@" ;;
+  insert-session) handle_insert_session_command "$@" ;;
   insert-equation|insert-inline-equation|insert-fraction|insert-sqrt|insert-sup|insert-sub|insert-bold|insert-italic|insert-code|insert-section|insert-subsection|insert-subsubsection)
     handle_insert_basic_command "$@"
     ;;

@@ -1,53 +1,189 @@
 # 线性代数演示提示词
 
-请读取 `playbooks/assets/linear-algebra-raw-notes.txt` 中的原始课堂笔记内容，并把它整理到当前正在运行的 Mogan 文档中。
+## Goal
 
-要求如下：
+读取 `playbooks/assets/linear-algebra-raw-notes.txt`，把内容整理进当前 Mogan 文档，并导出：
 
-1. 先新建一个文档，避免污染现有内容。
-2. 将原始笔记整理成一份结构清晰、适合复习的课堂笔记。
-3. 文档结构至少包含：
-   - 标题
-   - 2 到 4 个小节
-   - 一个“本节核心结论”总结段
-4. 保留原始笔记的核心信息，不要脱离原文过度发挥。
-5. 将口语化、模糊或不规范的表达改写成更正式、标准的教学表述。
-6. 对明显不严谨的内容进行规范化处理，特别是：
-   - `A x = b` 需要规范成数学公式
-   - `det(A)=0`、`det(A) != 0` 需要规范成数学表达
-   - “如果 det(A)=0 好像就没有唯一解” 需要整理成更准确的表述
-7. 把原始笔记中的
-   - `1 2`
-   - `3 4`
-   整理成一个 2x2 矩阵，并插入到文档中。
-8. 在合适的位置补充：
-   - 一个行内公式
-   - 一个显示公式
-   - 一个矩阵
-9. 重点句“本节核心结论”请单独成段，并做适当强调。
-10. 最后导出一份 HTML 到 `/tmp/linear-algebra-demo.html`。
+- HTML: `/tmp/linear-algebra-demo.html`
 
-执行方式要求：
+必须满足：
 
-1. 不要只给我整理后的文本结果。
-2. 你需要实际操作 Mogan，把内容写入文档。
-3. 优先使用当前仓库已有的 `mogan-cli` 能力，例如：
-   - `new-document`
-   - `stream-text`
-   - `insert-inline-equation`
-   - `insert-equation`
-   - `insert-matrix`
-   - `insert-bold`
-   - `export-buffer`
-4. 写入时尽量保留“agent 正在整理文档”的观感，不要全程只用一次性覆盖。
-5. 完成后，请回报：
-   - 你实际执行了哪些关键步骤
-   - 最终文档的核心结构
-   - HTML 导出路径
+- 新建文档，不污染现有内容
+- 标题 1 个
+- section 2 到 4 个
+- 行内公式至少 1 个
+- 显示公式至少 1 个
+- 2x2 矩阵 1 个
+- “本节核心结论”单独成段并强调
+- 标题和 section 标题不手写编号
 
-整理风格要求：
+## One Click
 
-- 语气简洁、清晰、像一份本科课堂复习笔记
-- 不要写得像论文
-- 不要加入原始笔记中完全没有提到的大段新知识
-- 可以做少量必要的补充，使逻辑更完整
+```bash
+./playbooks/scripts/linear-algebra-demo.sh
+```
+
+可选输出路径：
+
+```bash
+./playbooks/scripts/linear-algebra-demo.sh /tmp/linear-algebra-demo.html
+```
+
+## Fast Map
+
+- `new-document -> handle_simple_control_command -> mogan-test-new-document -> new-document`
+- `set-main-style -> handle_style_command -> mogan-test-set-main-style -> set-main-style`
+- `set-document-language -> handle_style_command -> mogan-test-set-document-language -> set-document-language`
+- `stream-text -> handle_stream_text -> mogan-test-insert-text-b64 -> insert`
+- `insert-text -> handle_control_value_command -> mogan-test-insert-text-b64 -> insert`
+- `insert-return -> handle_simple_control_command -> mogan-test-insert-return -> insert-return`
+- `insert-bold -> handle_insert_basic_command -> mogan-test-insert-bold-b64 -> insert '(bold ...)`
+- `insert-section -> handle_insert_basic_command -> mogan-test-insert-section-b64 -> make-section + insert`
+- `exit-right -> handle_simple_control_command -> mogan-test-structured-exit-right -> structured-exit-right`
+- `insert-inline-equation -> handle_insert_basic_command -> mogan-test-insert-inline-equation -> parse inline latex + insert`
+- `insert-equation -> handle_insert_basic_command -> mogan-test-insert-equation -> parse display latex + insert`
+- `insert-matrix -> handle_insert_complex_command -> mogan-test-insert-matrix -> build matrix tree`
+- `export-buffer -> handle_file_command -> mogan-test-export-buffer -> export buffer`
+- `buffer-text -> handle_simple_control_command -> mogan-test-buffer-text -> serialize tree`
+- `state -> handle_simple_control_command -> mogan-test-state -> full state record`
+
+## Steps
+
+### Step 1
+
+- CLI: 读取原始笔记，提取标题 / sections / 公式 / 矩阵 / 总结句
+- Chain: 无 Mogan 调用
+- Expect: 得到一份 2 到 4 节的结构草稿
+- Check: 自检结构是否覆盖所有硬约束
+
+### Step 2
+
+- CLI: `./bin/mogan-cli new-document`
+- Chain: `new-document -> handle_simple_control_command -> mogan-test-new-document -> new-document`
+- Expect: 切到新 scratch buffer
+- Check: `./bin/mogan-cli current-buffer`
+
+### Step 3
+
+- CLI:
+```bash
+./bin/mogan-cli set-main-style generic
+./bin/mogan-cli set-document-language chinese
+```
+- Chain:
+  - `set-main-style -> handle_style_command -> mogan-test-set-main-style -> set-main-style`
+  - `set-document-language -> handle_style_command -> mogan-test-set-document-language -> set-document-language`
+- Expect: 文档样式为 `generic`，语言为 `chinese`
+- Check: `./bin/mogan-cli state`
+
+### Step 4
+
+- CLI:
+```bash
+./bin/mogan-cli insert-bold "线性代数第三讲：矩阵与线性方程组"
+./bin/mogan-cli insert-return
+```
+- Chain:
+  - `insert-bold -> handle_insert_basic_command -> mogan-test-insert-bold-b64 -> insert '(bold ...)`
+  - `insert-return -> handle_simple_control_command -> mogan-test-insert-return -> insert-return`
+- Expect: 标题出现，光标进入下一段
+- Check: `./bin/mogan-cli buffer-text`
+
+### Step 5
+
+- CLI: 对每个 section 重复：
+```bash
+./bin/mogan-cli insert-section "<标题>"
+./bin/mogan-cli exit-right
+./bin/mogan-cli insert-return
+```
+- Chain:
+  - `insert-section -> handle_insert_basic_command -> mogan-test-insert-section-b64 -> make-section + insert`
+  - `exit-right -> handle_simple_control_command -> mogan-test-structured-exit-right -> structured-exit-right`
+  - `insert-return -> handle_simple_control_command -> mogan-test-insert-return -> insert-return`
+- Expect: 光标离开 section 标题，落到正文
+- Check: `./bin/mogan-cli state`
+
+### Step 6
+
+- CLI: 用 `stream-text` 分块写正文，例如：
+```bash
+printf '...' | ./bin/mogan-cli stream-text --chunk-size 12
+```
+- Chain: `stream-text -> handle_stream_text -> mogan-test-insert-text-b64 -> insert`
+- Expect: 正文逐步增长，不是一把覆盖
+- Check: `./bin/mogan-cli buffer-text`
+
+### Step 7
+
+- CLI:
+```bash
+./bin/mogan-cli insert-inline-equation 'Ax=b'
+./bin/mogan-cli insert-inline-equation 'det(A) \neq 0'
+```
+- Chain: `insert-inline-equation -> handle_insert_basic_command -> mogan-test-insert-inline-equation -> parse inline latex + insert`
+- Expect: 行内公式节点出现在正文中
+- Check: `./bin/mogan-cli state`
+
+### Step 8
+
+- CLI:
+```bash
+./bin/mogan-cli insert-equation 'Ax=b'
+```
+- Chain: `insert-equation -> handle_insert_basic_command -> mogan-test-insert-equation -> parse display latex + insert`
+- Expect: 独立公式块出现，光标回到块外
+- Check: `./bin/mogan-cli state`
+
+### Step 9
+
+- CLI:
+```bash
+./bin/mogan-cli insert-matrix 2 2 '1 2 3 4'
+```
+- Chain: `insert-matrix -> handle_insert_complex_command -> mogan-test-insert-matrix -> build matrix tree`
+- Expect: 2x2 矩阵节点出现
+- Check: `./bin/mogan-cli buffer-text`
+
+### Step 10
+
+- CLI:
+```bash
+./bin/mogan-cli insert-return
+./bin/mogan-cli insert-bold '本节核心结论'
+./bin/mogan-cli insert-text '：矩阵是线性系统与线性方程组分析的核心表达工具。'
+```
+- Chain:
+  - `insert-return -> handle_simple_control_command -> mogan-test-insert-return -> insert-return`
+  - `insert-bold -> handle_insert_basic_command -> mogan-test-insert-bold-b64 -> insert '(bold ...)`
+  - `insert-text -> handle_control_value_command -> mogan-test-insert-text-b64 -> insert`
+- Expect: 总结段独立，强调短语为结构化加粗
+- Check: `./bin/mogan-cli buffer-text`
+
+### Step 11
+
+- CLI:
+```bash
+./bin/mogan-cli export-buffer /tmp/linear-algebra-demo.html
+```
+- Chain: `export-buffer -> handle_file_command -> mogan-test-export-buffer -> export buffer`
+- Expect: HTML 导出成功
+- Check:
+```bash
+ls -l /tmp/linear-algebra-demo.html
+```
+
+## Done
+
+- `./bin/mogan-cli buffer-text`
+- `./bin/mogan-cli state`
+
+必须确认：
+
+- 有标题
+- 有 2 到 4 个 `section`
+- 有行内公式
+- 有显示公式
+- 有矩阵
+- 有总结段
+- 没有原始 `<math|...>` / `<matrix|...>` 文本

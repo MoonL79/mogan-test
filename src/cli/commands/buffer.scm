@@ -1,5 +1,5 @@
 (define *control-surface*
-  "state, move-*, select-*, undo, redo, copy, cut, paste, clear-undo-history, insert-text, insert-return, exit-right, insert-section, insert-subsection, insert-subsubsection, delete-*, save-buffer, export-buffer, set-main-style, set-document-language, add-style-package, remove-style-package, set-page-medium, set-page-type, set-page-orientation, switch-buffer")
+  "state, move-*, select-*, undo, redo, copy, cut, paste, clear-undo-history, insert-text, insert-session, insert-return, exit-right, insert-section, insert-subsection, insert-subsubsection, session-evaluate, session-evaluate-all, session-evaluate-above, session-evaluate-below, session-interrupt, session-stop, delete-*, save-buffer, export-buffer, set-main-style, set-document-language, add-style-package, remove-style-package, set-page-medium, set-page-type, set-page-orientation, switch-buffer")
 
 (define *file-control-surface*
   "buffer-list, open-file, save-as, export-buffer, revert-buffer, close-buffer")

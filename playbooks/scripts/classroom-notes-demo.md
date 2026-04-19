@@ -1,214 +1,182 @@
 # 课堂笔记 Demo 剧本
 
-## 目标
+## Goal
 
-这是一套面向投资人演示的 Mogan agent 剧本。核心叙事不是“学生工具”，而是：
+面向投资人演示：
 
-> Agent 可以实时接管一个真实文档编辑器，把持续输入的信息整理成结构化知识文档。
+- agent 在真实文档里持续编辑
+- 同时处理文本 / 公式 / 矩阵 / 强调
+- 最后导出 HTML 交付物
 
-课堂记笔记只是一个最容易理解的示例场景。你在口播时可以明确补一句：
+主题固定：
 
-> 今天我们用课堂笔记来演示，但同样的能力也可以迁移到会议纪要、投研记录、尽调访谈和销售通话摘要。
+- `线性代数：矩阵与线性方程组`
 
-## 演示目标
-
-投资人需要在 90 秒到 2 分钟内看到下面几件事：
-
-1. Agent 不是一次性生成文本，而是在真实文档里持续操作。
-2. Agent 能同时处理自然语言、公式、矩阵和格式化内容。
-3. Agent 不只是写，还能改，还能导出。
-4. 这是一个可以直接落到生产文档上的系统，而不是聊天窗口玩具。
-
-## 现场设定
-
-课程主题建议固定为：
-
-`线性代数：矩阵与线性方程组`
-
-原因：
-
-1. 可以自然展示公式。
-2. 可以自然展示矩阵。
-3. 内容足够技术化，但不难理解。
-4. 很适合把“实时记录”升级成“结构化整理”。
-
-## 演示节奏
-
-总共分成四段：
-
-1. 开场：新建文档，开始实时记笔记。
-2. 正课：边写边插公式和矩阵。
-3. 整理：补重点、修措辞、形成可复习笔记。
-4. 收尾：导出文档，强调交付物。
-
-## 口播版本
-
-下面这份口播文案可以直接照着说。
-
-### 第一段：开场
-
-“我现在不是在让一个模型吐一段文本，而是在让 agent 直接操作一个真实的文档编辑器。”
-
-“为了让场景更直观，我们用一个大家都能理解的例子：学生在课堂上记线性代数笔记。”
-
-“你会看到它不是一次性生成，而是随着信息流入，持续地把内容写进文档。”
-
-### 第二段：实时记笔记
-
-“现在老师开始讲课，agent 开始同步记录。”
-
-“它先写课程标题、章节结构，再逐段把老师讲的内容写入当前文档。”
-
-“这里最重要的一点是，文本是在真实文档里增长，不是聊天框里输出。”
-
-### 第三段：插入结构化数学内容
-
-“老师讲到线性系统时，agent 不只是记一句自然语言，它会把公式和矩阵也插进去。”
-
-“这说明它处理的不只是 plain text，而是结构化知识表达。”
-
-“如果你把这个能力迁移到别的场景，就不只是课堂笔记，也可以是研究备忘录、技术报告或者财务分析文档。”
-
-### 第四段：整理和导出
-
-“下课之后，agent 还可以继续整理这份文档，把重点加粗、修正措辞、形成一份真正可复习、可分享的笔记。”
-
-“最后它可以直接导出成 HTML，这意味着它能直接参与最终交付物，而不是停留在建议层。”
-
-### 结束语
-
-“所以这个系统的价值，不是生成一句答案，而是接管一个真实知识文档的持续生产过程。”
-
-## 屏幕上应该出现的内容
-
-建议最终文档内容长这样：
-
-### 标题
-
-`线性代数 第三讲：矩阵与线性方程组`
-
-### 正文
-
-`1. 矩阵用于表示线性变换。`
-
-`2. 线性系统通常写成 Ax = b。`
-
-`3. 若 det(A) ≠ 0，则系统有唯一解。`
-
-`4. 例子：考虑一个 2x2 矩阵。`
-
-### 结构化内容
-
-插入一个显示公式：
-
-`Ax=b`
-
-插入一个 2x2 矩阵：
-
-`[[1, 2], [3, 4]]`
-
-### 总结段
-
-`本节核心结论：矩阵是线性系统与线性变换的统一表示工具。`
-
-## 建议的演示动作
-
-下面这个顺序最稳。
-
-1. 新建文档。
-2. 用 `stream-text` 写入标题和前两段自然语言内容。
-3. 插入一个行内公式。
-4. 插入一个显示公式。
-5. 插入一个矩阵。
-6. 再流式写入总结段。
-7. 把“本节核心结论”加粗。
-8. 导出 HTML。
-
-## 推荐命令顺序
-
-下面是一套适合现场演示的命令顺序。实际 host / pseudo / pass 用你的默认配置即可。
+## One Click
 
 ```bash
+./playbooks/scripts/classroom-notes-demo.sh
+```
+
+可选输出路径：
+
+```bash
+./playbooks/scripts/classroom-notes-demo.sh /tmp/classroom-notes-demo.html
+```
+
+## Fast Map
+
+- `ping -> handle_simple_control_command -> mogan-test-ping`
+- `current-buffer -> handle_simple_control_command -> mogan-test-current-buffer`
+- `new-document -> handle_simple_control_command -> mogan-test-new-document -> new-document`
+- `stream-text -> handle_stream_text -> mogan-test-insert-text-b64 -> insert`
+- `insert-inline-equation -> handle_insert_basic_command -> mogan-test-insert-inline-equation -> parse inline latex + insert`
+- `insert-equation -> handle_insert_basic_command -> mogan-test-insert-equation -> parse display latex + insert`
+- `insert-matrix -> handle_insert_complex_command -> mogan-test-insert-matrix -> build matrix tree`
+- `insert-bold -> handle_insert_basic_command -> mogan-test-insert-bold-b64 -> insert '(bold ...)`
+- `insert-text -> handle_control_value_command -> mogan-test-insert-text-b64 -> insert`
+- `insert-return -> handle_simple_control_command -> mogan-test-insert-return -> insert-return`
+- `export-buffer -> handle_file_command -> mogan-test-export-buffer -> export buffer`
+- `buffer-text -> handle_simple_control_command -> mogan-test-buffer-text -> serialize tree`
+- `state -> handle_simple_control_command -> mogan-test-state -> full state`
+
+## Steps
+
+### Step 0
+
+- CLI:
+```bash
+./bin/mogan-cli ping
+./bin/mogan-cli current-buffer
+```
+- Expect: server 可用，当前连接有效
+- Check: `pong` 和当前 buffer 路径
+
+### Step 1
+
+- CLI:
+```bash
 ./bin/mogan-cli new-document
+```
+- Chain: `new-document -> handle_simple_control_command -> mogan-test-new-document -> new-document`
+- Expect: 新 scratch buffer
+- Check:
+```bash
+./bin/mogan-cli current-buffer
+```
 
-printf '线性代数 第三讲：矩阵与线性方程组\n\n1. 矩阵用于表示线性变换。\n2. 线性系统通常写成 ' \
+### Step 2
+
+- CLI:
+```bash
+printf '线性代数 第三讲：矩阵与线性方程组\n\n矩阵用于表示线性变换。\n线性系统通常写成 ' \
   | ./bin/mogan-cli stream-text --replace --chunk-size 16
-
-./bin/mogan-cli insert-inline-equation 'Ax=b'
-
-printf '\n3. 若 ' | ./bin/mogan-cli stream-text --chunk-size 16
-./bin/mogan-cli insert-inline-equation 'det(A) \\neq 0'
-printf '，则系统有唯一解。\n\n4. 例子：考虑一个 2x2 矩阵。\n' \
-  | ./bin/mogan-cli stream-text --chunk-size 16
-
-./bin/mogan-cli insert-equation 'Ax=b'
-./bin/mogan-cli insert-matrix 2 2 '1 2 3 4'
-
-printf '\n本节核心结论：矩阵是线性系统与线性变换的统一表示工具。\n' \
-  | ./bin/mogan-cli stream-text --chunk-size 16
-
-./bin/mogan-cli export-buffer /tmp/classroom-notes-demo.html
+```
+- Chain: `stream-text -> handle_stream_text -> mogan-test-insert-text-b64 -> insert`
+- Expect: 标题和正文分块出现
+- Check:
+```bash
 ./bin/mogan-cli buffer-text
 ```
 
-## 更稳的版本
+### Step 3
 
-如果你担心现场流式输入太长，可以缩短成下面这个版本。
-
+- CLI:
 ```bash
-./bin/mogan-cli new-document
-printf '线性代数：矩阵与线性方程组\n\n矩阵用于表示线性变换。\n线性系统通常写成 ' \
-  | ./bin/mogan-cli stream-text --replace --chunk-size 12
 ./bin/mogan-cli insert-inline-equation 'Ax=b'
-printf '\n若 ' | ./bin/mogan-cli stream-text --chunk-size 12
-./bin/mogan-cli insert-inline-equation 'det(A) \\neq 0'
-printf '，则系统有唯一解。\n' | ./bin/mogan-cli stream-text --chunk-size 12
-./bin/mogan-cli insert-matrix 2 2 '1 2 3 4'
-./bin/mogan-cli export-buffer /tmp/classroom-notes-demo.html
+```
+- Chain: `insert-inline-equation -> handle_insert_basic_command -> mogan-test-insert-inline-equation -> parse inline latex + insert`
+- Expect: 行内公式出现
+- Check:
+```bash
+./bin/mogan-cli state
 ```
 
-## 推荐的视觉技巧
+### Step 4
 
-为了让画面更“像 agent 在工作”，建议：
+- CLI:
+```bash
+printf '\n若 ' | ./bin/mogan-cli stream-text --chunk-size 16
+./bin/mogan-cli insert-inline-equation 'det(A) \neq 0'
+printf '，则系统有唯一解。\n\n例子：考虑一个 2x2 矩阵。\n' \
+  | ./bin/mogan-cli stream-text --chunk-size 16
+```
+- Chain:
+  - `stream-text -> handle_stream_text -> mogan-test-insert-text-b64 -> insert`
+  - `insert-inline-equation -> handle_insert_basic_command -> mogan-test-insert-inline-equation -> parse inline latex + insert`
+- Expect: 正文和第二个行内公式接上
+- Check:
+```bash
+./bin/mogan-cli buffer-text
+```
 
-1. `stream-text` 的 `--chunk-size` 设得小一点，比如 `12` 或 `16`。
-2. 不要一次性把全文流完，最好在自然语言和公式之间切换。
-3. 让公式和矩阵突然出现，这个视觉冲击很强。
-4. 最后一定要导出，让投资人看到这是交付物而不是测试结果。
+### Step 5
 
-## 如果现场想更戏剧化
+- CLI:
+```bash
+./bin/mogan-cli insert-equation 'Ax=b'
+```
+- Chain: `insert-equation -> handle_insert_basic_command -> mogan-test-insert-equation -> parse display latex + insert`
+- Expect: 显示公式块出现
+- Check:
+```bash
+./bin/mogan-cli state
+```
 
-你可以加入一个“老师口误，agent 纠正”的桥段。
+### Step 6
 
-比如先流式写：
+- CLI:
+```bash
+./bin/mogan-cli insert-matrix 2 2 '1 2 3 4'
+```
+- Chain: `insert-matrix -> handle_insert_complex_command -> mogan-test-insert-matrix -> build matrix tree`
+- Expect: 2x2 矩阵出现
+- Check:
+```bash
+./bin/mogan-cli buffer-text
+```
 
-`若 det(A)=0，则系统有唯一解。`
+### Step 7
 
-然后立刻说：
+- CLI:
+```bash
+./bin/mogan-cli insert-return
+./bin/mogan-cli insert-bold '本节核心结论'
+./bin/mogan-cli insert-text '：矩阵是线性系统与线性变换的统一表示工具。'
+```
+- Chain:
+  - `insert-return -> handle_simple_control_command -> mogan-test-insert-return -> insert-return`
+  - `insert-bold -> handle_insert_basic_command -> mogan-test-insert-bold-b64 -> insert '(bold ...)`
+  - `insert-text -> handle_control_value_command -> mogan-test-insert-text-b64 -> insert`
+- Expect: 总结段独立且有强调
+- Check:
+```bash
+./bin/mogan-cli buffer-text
+```
 
-“老师这里说得不够准确，agent 现在修正成严格表述。”
+### Step 8
 
-再执行搜索替换或重写，把它改成：
+- CLI:
+```bash
+./bin/mogan-cli export-buffer /tmp/classroom-notes-demo.html
+```
+- Chain: `export-buffer -> handle_file_command -> mogan-test-export-buffer -> export buffer`
+- Expect: HTML 文件生成
+- Check:
+```bash
+ls -l /tmp/classroom-notes-demo.html
+```
 
-`若 det(A) ≠ 0，则系统有唯一解。`
+## Done
 
-这个桥段会让投资人更明显地感受到：
+- `./bin/mogan-cli buffer-text`
+- `./bin/mogan-cli state`
 
-1. agent 不是录音机。
-2. agent 会参与知识整理。
-3. agent 有从原始输入到成品文档的转化能力。
+确认：
 
-## 演示时不要做的事
-
-1. 不要把命令一条条解释成测试指令。
-2. 不要先讲内部架构，先讲画面和结果。
-3. 不要让文本太长，否则节奏会拖。
-4. 不要现场尝试太复杂的数学语法。
-5. 不要把它讲成一个小众教育工具，要讲成通用知识文档 agent。
-
-## 一句话定位
-
-如果需要一句最短的总结，可以用：
-
-> 这是一个能实时接管真实文档编辑器、把持续输入整理成结构化知识文档的 agent。
-
+- 有标题
+- 有行内公式
+- 有显示公式
+- 有矩阵
+- 有总结段
+- 没有原始 TeXmacs 标记文本

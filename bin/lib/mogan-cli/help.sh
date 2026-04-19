@@ -49,6 +49,7 @@ Commands:
   copy/cut/paste - Clipboard primitives
   clear-undo-history - Reset the current edit history
   insert-text    - Insert text at the cursor
+  insert-session - Insert a language session (language [variant])
   insert-return  - Insert a raw return
   exit-right     - Exit the current structured node to the right
   delete-*       - Delete at the cursor
@@ -95,5 +96,11 @@ Commands:
   insert-subsection - Insert a subsection title
   insert-subsubsection - Insert a subsubsection title
   insert-link    - Insert a hyperlink (url text)
+  session-evaluate - Evaluate the current session input field
+  session-evaluate-all - Evaluate all session inputs in the current session tree
+  session-evaluate-above - Evaluate session inputs above the cursor
+  session-evaluate-below - Evaluate session inputs at or below the cursor
+  session-interrupt - Interrupt the current running session
+  session-stop   - Stop the current session process
 EOF
 }

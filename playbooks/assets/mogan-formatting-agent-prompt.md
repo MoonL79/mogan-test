@@ -1,148 +1,80 @@
 # 通用 Mogan 排版提示词
 
-你现在的任务不是“输出一段整理后的文本”，而是“实际操作 Mogan，把用户提供的原始内容整理成一份排版良好的文档”。
+## Goal
 
-## 核心规则
+把用户内容实际写进 Mogan 文档，而不是输出一段“排版后的文本”。
 
-1. 不要把 TeXmacs / Mogan 的底层标记语言直接当作文本写进文档。
-2. 严禁把如下内容以纯文本形式插入正文：
-   - `<with|...>`
-   - `<math|...>`
-   - `<equation*|...>`
-   - `<matrix|...>`
-   - `<tformat|...>`
-   - `<table|...>`
-   - 任何类似 `<tag|...>` 的原始 TeXmacs 标记
-3. 你的职责是“调用已有的 Mogan 控制能力进行排版”，不是“把排版标记打印出来”。
-4. 如果需要加粗、斜体、代码、公式、矩阵、链接、表格，必须优先使用现有命令去生成结构，而不是手写标记串。
-5. 只有在插入 `section`、`subsection`、`subsubsection` 这类标题结构后，才需要调用 `exit-right` 跳出标题结构；其他结构默认不要求这样做。
+## Fast Rules
 
-## 你应当如何工作
+- 不手写 TeXmacs/Mogan 原始标记
+- 能用结构命令就不用纯文本伪装结构
+- `section` / `subsection` / `subsubsection` 后必须显式 `exit-right`
+- 完成前必须跑 `buffer-text` 或 `state`
 
-当用户说“帮我整理笔记到 Mogan 中”时，你应该按下面的顺序执行：
+## Fast Map
 
-1. 先理解原始笔记内容。
-2. 提取文档结构：
-   - 标题
-   - 小节
-   - 重点
-   - 公式
-   - 矩阵
-   - 总结
-3. 在 Mogan 中新建或清空目标文档。
-4. 用普通正文命令写入自然语言内容。
-5. 用结构化命令插入：
-   - 加粗
-   - 斜体
-   - 行内公式
-   - 显示公式
-   - 矩阵
-   - 代码
-   - 链接
-   - 表格
-6. 如果插入的是 `section`、`subsection`、`subsubsection`，先调用 `exit-right`，再按需要 `insert-return` 并写正文。
-7. 最后检查文档是否出现了原始标记字符串；如果出现，说明排版失败，需要修正。
+- `new-document -> handle_simple_control_command -> mogan-test-new-document -> new-document`
+- `write-text -> handle_write_text -> mogan-test-write-text-b64 -> buffer-set-body`
+- `stream-text -> handle_stream_text -> mogan-test-insert-text-b64 -> insert`
+- `insert-text -> handle_control_value_command -> mogan-test-insert-text-b64 -> insert`
+- `insert-return -> handle_simple_control_command -> mogan-test-insert-return -> insert-return`
+- `insert-bold -> handle_insert_basic_command -> mogan-test-insert-bold-b64 -> insert '(bold ...)`
+- `insert-italic -> handle_insert_basic_command -> mogan-test-insert-italic-b64 -> insert '(it ...)`
+- `insert-code -> handle_insert_basic_command -> mogan-test-insert-code-b64 -> insert '(code ...)`
+- `insert-inline-equation -> handle_insert_basic_command -> mogan-test-insert-inline-equation -> parse inline latex + insert`
+- `insert-equation -> handle_insert_basic_command -> mogan-test-insert-equation -> parse display latex + insert`
+- `insert-matrix -> handle_insert_complex_command -> mogan-test-insert-matrix -> build matrix tree`
+- `insert-link -> handle_insert_complex_command -> mogan-test-insert-link -> insert hlink`
+- `insert-section -> handle_insert_basic_command -> mogan-test-insert-section-b64 -> make-section + insert`
+- `exit-right -> handle_simple_control_command -> mogan-test-structured-exit-right -> structured-exit-right`
+- `insert-session -> handle_insert_session_command -> mogan-test-insert-session-b64 -> make-session`
+- `session-evaluate -> handle_simple_control_command -> mogan-test-session-evaluate -> session-evaluate`
+- `export-buffer -> handle_file_command -> mogan-test-export-buffer -> export buffer`
+- `buffer-text -> handle_simple_control_command -> mogan-test-buffer-text -> serialize tree`
+- `state -> handle_simple_control_command -> mogan-test-state -> full state`
 
-## 排版行为规范
+## Execution Skeleton
 
-### 1. 标题与小节
+### Step 1. Parse
 
-1. 标题和小节标题应当以普通文本写入。
-2. 如果当前系统没有专门的“标题样式命令”，则优先用纯文本加空行组织层级，不要手写 `<with|font-series|bold|...>`。
-3. 如果需要视觉强调，可以使用现有的 `insert-bold`，但不要把“整段带标签的原始标记”直接写进文档。
-4. 插入 section、subsection 等标题结构后，先 `exit-right`，再决定是否 `insert-return` 并写正文。
-5. 如果使用 `insert-section`、`insert-subsection`、`insert-subsubsection`，标题文本不要自行写 `1.`、`1.1`、`第一节` 这类显式编号；编号应交给环境自动生成。
+- 提取：标题 / sections / 强调句 / 公式 / 矩阵 / 总结
 
-### 2. 正文
+### Step 2. Open
 
-1. 正文一律使用普通文本写入。
-2. 保持语言规范、简洁、可复习。
-3. 不要把公式、矩阵、链接的底层表示混入正文。
+- `./bin/mogan-cli new-document`
 
-### 3. 加粗与斜体
+### Step 3. Build Base
 
-1. 需要强调短语时，使用结构化命令，例如：
-   - `insert-bold`
-   - `insert-italic`
-2. 不要写出：
-   - `<with|font-series|bold|重点>`
-   - `<with|font-shape|italic|说明>`
+- 普通正文优先用 `stream-text`
+- 必要时用 `insert-text`
 
-### 4. 公式
+### Step 4. Add Structure
 
-1. 行内数学内容要用行内公式命令，不要直接写形如 `<math|...>` 的文本。
-2. 独立公式要用显示公式命令，不要直接写形如 `<equation*|...>` 的文本。
-3. 如果用户原文里是 `A x = b`、`det(A) != 0` 这样的半结构化表达，你应当先规范成数学表达，再插入。
+- 标题强调：`insert-bold`
+- section：`insert-section` -> `exit-right` -> `insert-return`
+- 行内公式：`insert-inline-equation`
+- 显示公式：`insert-equation`
+- 矩阵：`insert-matrix`
+- 代码：`insert-code`
+- 链接：`insert-link`
+- session：`insert-session` -> `session-evaluate`
 
-### 5. 矩阵
+### Step 5. Verify
 
-1. 矩阵必须使用矩阵插入命令生成。
-2. 不要直接把 `<matrix|<tformat|...>>` 作为纯文本写入正文。
-3. 当前默认约定是：矩阵应插入到显示公式中，使其自然居中显示。
+- `./bin/mogan-cli buffer-text`
+- `./bin/mogan-cli state`
 
-### 6. 列表
+## Hard Failures
 
-1. 如果当前系统没有稳定的项目符号命令，就使用清晰的纯文本编号或短句分行。
-2. 不要为了“像富文本”而输出原始 TeXmacs 列表标记。
+- 把 `<with|...>` / `<math|...>` / `<matrix|...>` 当正文写进去
+- section 标题里手写编号
+- 该用结构命令的地方只写纯文本
+- 不做 `buffer-text` / `state` 自检
 
-### 7. 代码和链接
+## Minimal Report Format
 
-1. 代码短语用 `insert-code`。
-2. 链接文本用 `insert-link`。
-3. 不要把代码或链接的底层节点表示直接写进正文。
+完成后只需回报这三类信息：
 
-## 面向当前仓库能力的优先级
-
-如果当前仓库中已经有以下命令，优先使用它们：
-
-- `new-document`
-- `write-text`
-- `stream-text`
-- `insert-text`
-- `insert-bold`
-- `insert-italic`
-- `insert-code`
-- `insert-inline-equation`
-- `insert-equation`
-- `insert-fraction`
-- `insert-matrix`
-- `insert-link`
-- `insert-table`
-- `export-buffer`
-
-## 明确禁止的行为
-
-以下行为视为失败：
-
-1. 把带尖括号的 TeXmacs 标记直接写入用户文档。
-2. 为了省事，把“目标排版结果”用伪 markup 直接拼成文本。
-3. 把矩阵、公式、加粗、斜体的结构表示以纯文本输出到文档里。
-4. 在 section、subsection、subsubsection 标题里手写显式编号。
-5. 在没有检查结果的情况下结束任务。
-
-## 自检清单
-
-在你完成文档写入前，必须自检：
-
-1. 文档里是否出现了 `<with|`、`<matrix|`、`<math|`、`<table|`、`<equation` 这类原始标记文本？
-2. 该加粗的内容是不是以“结构化加粗”出现，而不是标签串？
-3. 公式是不是以公式节点出现，而不是普通文本？
-4. 矩阵是不是以矩阵节点出现，并且默认作为独立显示块？
-5. section 类标题是否避免了手写编号，而是交给环境自动编号？
-6. 中文内容是否正常，不是乱码？
-
-如果以上任何一项失败，就继续修正，不要直接结束。
-
-## 推荐执行风格
-
-当你整理用户笔记时：
-
-1. 先用普通正文建立主结构。
-2. 再补加粗、斜体、公式、矩阵等结构化内容。
-3. 对 section 类标题，插入后先 `exit-right`，不要假设光标会自动回到外层。
-4. 尽量让文档逐步成形，而不是一次性覆盖成一大段结果。
-5. 输出给用户的总结中，说明你“实际做了哪些文档操作”，而不是只贴最终文本。
-
-## 一句话原则
-
-> 你的任务是实际排版文档，不是把排版标记伪装成正文内容。
+1. 实际执行了哪些关键命令
+2. 最终文档结构
+3. 导出路径或验证结果

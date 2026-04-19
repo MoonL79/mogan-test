@@ -314,6 +314,12 @@ handle_simple_control_command() {
     delete-left) handle_basic_remote_command "(mogan-test-delete-left)" "$@" ;;
     delete-right) handle_basic_remote_command "(mogan-test-delete-right)" "$@" ;;
     save-buffer) handle_basic_remote_command "(mogan-test-save-buffer)" "$@" ;;
+    session-evaluate) handle_basic_remote_command "(mogan-test-session-evaluate)" "$@" ;;
+    session-evaluate-all) handle_basic_remote_command "(mogan-test-session-evaluate-all)" "$@" ;;
+    session-evaluate-above) handle_basic_remote_command "(mogan-test-session-evaluate-above)" "$@" ;;
+    session-evaluate-below) handle_basic_remote_command "(mogan-test-session-evaluate-below)" "$@" ;;
+    session-interrupt) handle_basic_remote_command "(mogan-test-session-interrupt)" "$@" ;;
+    session-stop) handle_basic_remote_command "(mogan-test-session-stop)" "$@" ;;
   esac
 }
 
@@ -492,6 +498,70 @@ handle_control_value_command() {
     switch-buffer) remote_command="(mogan-test-switch-buffer \"$(scheme_escape "$control_value")\")" ;;
   esac
 
+  run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
+}
+
+handle_insert_session_command() {
+  shift || true
+  local language=""
+  local variant="default"
+  local server_name
+  local pseudo
+  local passwd
+  local dry_run_flag=""
+  local remote_command
+
+  if [[ $# -lt 1 ]]; then
+    echo '{"status":"error","message":"Usage: insert-session <language> [variant] [server pseudo pass] [--dry-run]"}' >&2
+    exit 1
+  fi
+
+  language="${1:-}"
+
+  case $# in
+    1)
+      ;;
+    2)
+      if [[ "${2:-}" == "--dry-run" ]]; then
+        dry_run_flag="--dry-run"
+      else
+        variant="${2:-default}"
+      fi
+      ;;
+    3)
+      variant="${2:-default}"
+      if [[ "${3:-}" == "--dry-run" ]]; then
+        dry_run_flag="--dry-run"
+      else
+        server_name="${3:-$DEFAULT_HOST}"
+      fi
+      ;;
+    *)
+      variant="${2:-default}"
+      server_name="${3:-$DEFAULT_HOST}"
+      pseudo="${4:-$DEFAULT_PSEUDO}"
+      passwd="${5:-$DEFAULT_PASS}"
+      if [[ "${6:-}" == "--dry-run" ]]; then
+        dry_run_flag="--dry-run"
+      fi
+      ;;
+  esac
+
+  if [[ -z "${server_name:-}" ]]; then
+    server_name="$DEFAULT_HOST"
+  fi
+  if [[ -z "${pseudo:-}" ]]; then
+    pseudo="$DEFAULT_PSEUDO"
+  fi
+  if [[ -z "${passwd:-}" ]]; then
+    passwd="$DEFAULT_PASS"
+  fi
+
+  if [[ "${MOGAN_TEST_DRY_RUN:-0}" == "1" ]]; then
+    dry_run_flag="--dry-run"
+  fi
+
+  remote_command="(mogan-test-insert-session-b64 \"$(base64_encode_text "$language")\" \"$(base64_encode_text "$variant")\")"
   run_remote_runtime_command "$remote_command" "$server_name" "$pseudo" "$passwd" "$dry_run_flag"
 }
 
